@@ -10,7 +10,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: {},
         password: {},
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, _request) => {
         const { email, password } = credentials as {
           email: string;
           password: string;
@@ -39,7 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          avatar: user.avatar,
+          avatar: user.avatar ?? undefined,
         };
       },
     }),

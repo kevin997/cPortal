@@ -1,0 +1,60 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Home, Users, Calendar, UserPlus, LogOut } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
+
+const navItems = [
+  { href: "/dashboard", icon: Home, label: "Dashboard" },
+  { href: "/dashboard/students", icon: Users, label: "Students" },
+  { href: "/dashboard/bootcamps", icon: Calendar, label: "Bootcamps" },
+  { href: "/dashboard/enrollments", icon: UserPlus, label: "Enroll" },
+];
+
+export function MobileNav() {
+  const pathname = usePathname();
+
+  return (
+    <>
+      {/* Top Bar */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b safe-area-inset-top">
+        <div className="flex items-center justify-between px-4 h-14">
+          <h1 className="text-xl font-bold text-primary">cPortal</h1>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-2 hover:bg-accent rounded-md transition-colors"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t safe-area-inset-bottom">
+        <div className="grid grid-cols-4 h-16">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-colors",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
+  );
+}

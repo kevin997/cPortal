@@ -1,0 +1,8 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "prisma migrate deploy && prisma generate && next build",
+  "installCommand": "npm install",
+  "env": {
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+  }
+}

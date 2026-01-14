@@ -28,7 +28,7 @@ interface Bootcamp {
 const statusColors: Record<string, "default" | "success" | "warning" | "destructive"> = {
   upcoming: "default",
   ongoing: "success",
-  completed: "secondary",
+  completed: "default",
   cancelled: "destructive",
 };
 
@@ -224,13 +224,12 @@ export default function BootcampsPage() {
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${
-                          isFull
+                        className={`h-2 rounded-full transition-all ${isFull
                             ? "bg-destructive"
                             : isNearFull
-                            ? "bg-yellow-500"
-                            : "bg-primary"
-                        }`}
+                              ? "bg-yellow-500"
+                              : "bg-primary"
+                          }`}
                         style={{
                           width: `${Math.min(percentage, 100)}%`,
                         }}

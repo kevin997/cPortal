@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -12,8 +12,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const enrollment = await prisma.enrollment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         student: true,
         bootcampSession: true,
@@ -45,7 +46,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -53,11 +54,12 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, notes } = body;
 
     const enrollment = await prisma.enrollment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         notes,
@@ -86,7 +88,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -94,9 +96,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Get enrollment to update bootcamp capacity
     const enrollment = await prisma.enrollment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!enrollment) {
@@ -109,7 +113,7 @@ export async function DELETE(
     // Delete enrollment and update bootcamp capacity
     await prisma.$transaction([
       prisma.enrollment.delete({
-        where: { id: params.id },
+        where: { id },
       }),
       prisma.bootcampSession.update({
         where: { id: enrollment.bootcampSessionId },

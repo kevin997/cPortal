@@ -28,6 +28,7 @@ function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -70,6 +71,13 @@ function SignupForm() {
       return;
     }
 
+    // Validate referral code
+    const codeRegex = /^[A-Za-z0-9]{4,20}$/;
+    if (!codeRegex.test(referralCode.trim())) {
+      setError("Le code de parrainage doit contenir entre 4 et 20 caractères alphanumériques");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -85,6 +93,7 @@ function SignupForm() {
           phone,
           password,
           promotionId,
+          referralCode: referralCode.trim(),
         }),
       });
 
@@ -192,6 +201,24 @@ function SignupForm() {
                 required
                 disabled={loading}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="referralCode">Votre code de parrainage personnalisé</Label>
+              <Input
+                id="referralCode"
+                type="text"
+                placeholder="ex: KINGFURY237"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                required
+                disabled={loading}
+                maxLength={20}
+                className="uppercase font-mono tracking-wider"
+              />
+              <p className="text-xs text-muted-foreground">
+                4-20 caractères, lettres et chiffres uniquement. Ce code sera votre lien de parrainage.
+              </p>
             </div>
 
             <div className="space-y-2">

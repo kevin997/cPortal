@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { nanoid } from "nanoid";
 
-// Generate unique referral code
-function generateReferralCode(): string {
-  return nanoid(8).toUpperCase();
+// Validate referral code format (alphanumeric, 4-20 chars, uppercase)
+function isValidReferralCode(code: string): boolean {
+  const regex = /^[A-Z0-9]{4,20}$/;
+  return regex.test(code);
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, password, promotionId } = body;
+    const { name, email, phone, password, promotionId, referralCode } = body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !referralCode) {
       return NextResponse.json(
-        { error: "Name, email, and password are required" },
+        { error: "Name, email, password, and referral code are required" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize referral code to uppercase
+    const normalizedCode = referralCode.trim().toUpperCase();
+
+    // Validate referral code format
+    if (!isValidReferralCode(normalizedCode)) {
+      return NextResponse.json(
+        { error: "Referral code must be 4-20 alphanumeric characters (letters and numbers only)" },
         { status: 400 }
       );
     }
@@ -28,6 +39,18 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         { error: "Email already registered" },
+        { status: 400 }
+      );
+    }
+
+    // Check if referral code is already taken
+    const existingCode = await prisma.user.findUnique({
+      where: { referralCode: normalizedCode },
+    });
+
+    if (existingCode) {
+      return NextResponse.json(
+        { error: "This referral code is already taken. Please choose another." },
         { status: 400 }
       );
     }
@@ -49,20 +72,6 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate unique referral code
-    let referralCode = generateReferralCode();
-    let codeExists = await prisma.user.findUnique({
-      where: { referralCode },
-    });
-
-    // Ensure uniqueness
-    while (codeExists) {
-      referralCode = generateReferralCode();
-      codeExists = await prisma.user.findUnique({
-        where: { referralCode },
-      });
-    }
-
     // Create user with referrer role
     const user = await prisma.user.create({
       data: {
@@ -71,7 +80,7 @@ export async function POST(request: NextRequest) {
         phone,
         password: hashedPassword,
         role: "referrer",
-        referralCode,
+        referralCode: normalizedCode,
         walletBalance: 0,
       },
       select: {

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -19,12 +19,15 @@ export const metadata: Metadata = {
   title: "cPortal - Bootcamp Management Portal",
   description: "Internal portal for managing bootcamp enrollments and student onboarding",
   manifest: "/manifest.json",
-  themeColor: "#6366f1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "cPortal",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({

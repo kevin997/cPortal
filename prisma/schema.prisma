@@ -11,36 +11,78 @@ datasource db {
 
 // User Model for Authentication
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("sales_agent") // sales_agent, sales_rep, sales_manager
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  phone         String?
+  name          String
+  password      String
+  role          String   @default("sales_agent") // sales_agent, sales_rep, sales_manager, referrer
+  avatar        String?
+  referralCode  String?  @unique
+  walletBalance Int      @default(0) // Accumulated rewards in XAF
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   students    Student[]
   enrollments Enrollment[]
+  leads       Lead[] // Leads referred by this user
 
   @@map("users")
 }
 
+// Promotion Model for Referral Campaigns
+model Promotion {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?  @db.Text
+  rewardAmount    Int // Referrer reward in XAF
+  discountPercent Int // Referee discount percentage
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  leads Lead[]
+
+  @@map("promotions")
+}
+
+// Lead Model for Referral Tracking
+model Lead {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String
+  email       String?
+  referrerId  String
+  promotionId String
+  status      String    @default("pending") // pending, contacted, converted, lost
+  notes       String?   @db.Text
+  convertedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  referrer  User      @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@map("leads")
+}
+
 // Student Model
 model Student {
-  id           String   @id @default(cuid())
-  fullName     String
-  email        String   @unique
-  phoneNumber  String
+  id            String    @id @default(cuid())
+  fullName      String
+  email         String    @unique
+  phoneNumber   String
   neighbourhood String?
-  address      String?
-  dateOfBirth  DateTime?
-  gender       String?
-  notes        String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdById  String
+  address       String?
+  dateOfBirth   DateTime?
+  gender        String?
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String
 
   // Relations
   createdBy   User         @relation(fields: [createdById], references: [id])

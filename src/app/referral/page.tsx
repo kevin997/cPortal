@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Gift, TrendingUp, Users, ArrowRight, Loader2 } from "lucide-react";
+import { Gift, TrendingUp, Users, ArrowRight, Loader2, MessageCircle } from "lucide-react";
 
 interface Promotion {
   id: string;
@@ -214,6 +214,55 @@ export default function ReferralLandingPage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* WhatsApp Community Section */}
+      <section className="py-12 px-4 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/10">
+        <div className="container mx-auto max-w-2xl">
+          <Card className="border-green-200 dark:border-green-800 shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="w-8 h-8" />
+              </div>
+              <CardTitle className="text-2xl">Besoin d'aide pour créer votre compte ?</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Rejoignez la communauté WhatsApp des Accélérateurs de CSL Brands
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-muted-foreground">
+                Vous ne savez pas comment créer votre compte affilié ? Pas de problème !
+                Notre communauté d'accélérateurs est là pour vous accompagner étape par étape.
+              </p>
+              <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-sm">Dans ce groupe, vous trouverez :</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Assistance pour la création de votre compte</li>
+                  <li>Conseils pour maximiser vos parrainages</li>
+                  <li>Partage d'expériences avec d'autres affiliés</li>
+                  <li>Support direct de l'équipe CSL Brands</li>
+                </ul>
+              </div>
+              <a
+                href="https://chat.whatsapp.com/HPVTVZHspJU5hQUmTDPw0K"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button
+                  size="lg"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Rejoindre le groupe WhatsApp
+                </Button>
+              </a>
+              <p className="text-xs text-center text-muted-foreground">
+                Cliquez sur le bouton ci-dessus pour rejoindre notre communauté sur WhatsApp
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

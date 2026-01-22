@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,15 @@ export default function ReferralLandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-primary">cPortal Referral</h1>
+          <Link href="/referral" className="flex items-center gap-2">
+            <Image
+              src="/logo-c-portal.svg"
+              alt="cPortal"
+              width={36}
+              height={36}
+              className="h-9 w-auto"
+            />
+          </Link>
           <Link href="/referral/login">
             <Button variant="outline" size="sm">
               Login

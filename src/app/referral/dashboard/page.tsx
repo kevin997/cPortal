@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +121,15 @@ export default function ReferrerDashboardPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b safe-area-inset-top">
         <div className="flex items-center justify-between px-4 h-14 max-w-4xl mx-auto">
-          <h1 className="text-xl font-bold text-primary">Mon Espace Affilié</h1>
+          <Link href="/referral/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo-c-portal.svg"
+              alt="cPortal"
+              width={32}
+              height={32}
+              className="h-8 w-auto"
+            />
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/referral" })}
             className="p-2 hover:bg-accent rounded-md transition-colors"

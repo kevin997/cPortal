@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, Users, Calendar, UserPlus, LogOut, Gift, Menu, X, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,15 @@ export function MobileNav() {
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b safe-area-inset-top">
         <div className="flex items-center justify-between px-4 h-14">
-          <h1 className="text-xl font-bold text-primary">cPortal</h1>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo-c-portal.svg"
+              alt="cPortal"
+              width={32}
+              height={32}
+              className="h-8 w-auto"
+            />
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="p-2 hover:bg-accent rounded-md transition-colors"

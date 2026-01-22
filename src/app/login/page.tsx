@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/logo-c-portal.svg"
+              alt="cPortal"
+              width={64}
+              height={64}
+              className="h-16 w-auto"
+            />
+          </div>
           <CardTitle className="text-3xl font-bold">cPortal</CardTitle>
           <CardDescription>
             Sign in to manage bootcamp enrollments

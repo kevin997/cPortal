@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, use } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,6 +189,19 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <div className="max-w-md mx-auto pt-8 pb-16">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <Link href="/referral" className="flex items-center gap-2">
+            <Image
+              src="/logo-c-portal.svg"
+              alt="cPortal"
+              width={48}
+              height={48}
+              className="h-12 w-auto"
+            />
+          </Link>
+        </div>
+
         {/* Referrer Banner */}
         {referrer && (
           <div className="bg-primary/10 rounded-xl p-4 mb-6 text-center">

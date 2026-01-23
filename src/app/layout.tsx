@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Amplitude } from "@/lib/amplitude";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <Amplitude />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Gift, Loader2, CheckCircle, AlertCircle, Percent, User } from "lucide-react";
+import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
 
 interface Promotion {
   id: string;
@@ -81,6 +82,13 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
           } else if (promotionsData.length > 0) {
             setSelectedPromotion(promotionsData[0].id);
           }
+
+          // Track promotion view
+          trackEvent(AnalyticsEvents.PROMOTION_VIEWED, {
+            referralCode,
+            referrerName: referrerData.referrer?.name,
+            promotionCount: promotionsData.length,
+          });
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -96,6 +104,12 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
+
+    // Track form start
+    trackEvent(AnalyticsEvents.LEAD_FORM_STARTED, {
+      referralCode,
+      promotionId: selectedPromotion,
+    });
 
     try {
       const response = await fetch("/api/referral/leads", {
@@ -116,13 +130,29 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
 
       if (!response.ok) {
         setError(data.error || "Une erreur s'est produite");
+        trackEvent(AnalyticsEvents.LEAD_FORM_ERROR, {
+          referralCode,
+          error: data.error,
+        });
         setSubmitting(false);
         return;
       }
 
+      // Track successful submission
+      trackEvent(AnalyticsEvents.LEAD_FORM_SUBMITTED, {
+        referralCode,
+        promotionId: selectedPromotion,
+        promotionName: selectedPromotionData?.name,
+        discountPercent: selectedPromotionData?.discountPercent,
+      });
+
       setSuccess(true);
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      trackEvent(AnalyticsEvents.LEAD_FORM_ERROR, {
+        referralCode,
+        error: "exception",
+      });
     } finally {
       setSubmitting(false);
     }

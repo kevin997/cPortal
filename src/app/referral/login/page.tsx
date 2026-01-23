@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
 
 export default function ReferralLoginPage() {
   const router = useRouter();
@@ -32,12 +33,22 @@ export default function ReferralLoginPage() {
 
       if (result?.error) {
         setError("Email ou mot de passe incorrect");
+        trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
+          type: "login_error",
+          error: "invalid_credentials",
+        });
       } else {
+        trackEvent(AnalyticsEvents.LOGIN, {
+          method: "credentials",
+        });
         router.push("/referral/dashboard");
         router.refresh();
       }
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
+        type: "login_exception",
+      });
     } finally {
       setLoading(false);
     }

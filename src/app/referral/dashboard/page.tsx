@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { trackEvent, identifyUser, resetUser, AnalyticsEvents } from "@/hooks/useAnalytics";
 
 interface Lead {
   id: string;
@@ -66,6 +67,12 @@ export default function ReferrerDashboardPage() {
         if (response.ok) {
           const data = await response.json();
           setStats(data);
+          // Track dashboard view with stats
+          trackEvent(AnalyticsEvents.DASHBOARD_VIEWED, {
+            totalLeads: data.totalLeads,
+            walletBalance: data.walletBalance,
+            convertedLeads: data.statusCounts?.converted,
+          });
         } else if (response.status === 401) {
           router.push("/referral/login");
         }
@@ -77,9 +84,17 @@ export default function ReferrerDashboardPage() {
     }
 
     if (status === "authenticated") {
+      // Identify the user for analytics
+      if (session?.user?.id) {
+        identifyUser(session.user.id, {
+          email: session.user.email,
+          name: session.user.name,
+          role: session.user.role,
+        });
+      }
       fetchStats();
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount);
@@ -94,7 +109,26 @@ export default function ReferrerDashboardPage() {
     const link = getReferralLink();
     await navigator.clipboard.writeText(link);
     setCopied(true);
+    trackEvent(AnalyticsEvents.REFERRAL_LINK_COPIED, {
+      referralCode: stats?.referralCode,
+    });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleLogout = () => {
+    trackEvent(AnalyticsEvents.LOGOUT);
+    resetUser();
+    signOut({ callbackUrl: "/referral" });
+  };
+
+  const handleWhatsAppShare = () => {
+    const link = getReferralLink();
+    const text = `Rejoins cette formation et bénéficie d'une réduction ! ${link}`;
+    trackEvent(AnalyticsEvents.REFERRAL_LINK_SHARED, {
+      platform: "whatsapp",
+      referralCode: stats?.referralCode,
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   const getStatusBadge = (status: string) => {
@@ -131,7 +165,7 @@ export default function ReferrerDashboardPage() {
             />
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/referral" })}
+            onClick={handleLogout}
             className="p-2 hover:bg-accent rounded-md transition-colors"
             aria-label="Se déconnecter"
           >
@@ -239,11 +273,7 @@ export default function ReferrerDashboardPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => {
-                  const link = getReferralLink();
-                  const text = `Rejoins cette formation et bénéficie d'une réduction ! ${link}`;
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-                }}
+                onClick={handleWhatsAppShare}
                 className="flex-1 sm:flex-none"
               >
                 Partager sur WhatsApp

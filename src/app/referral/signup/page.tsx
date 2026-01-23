@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Gift } from "lucide-react";
+import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
 
 interface Promotion {
   id: string;
@@ -102,9 +103,20 @@ function SignupForm() {
 
       if (!response.ok) {
         setError(data.error || "Une erreur s'est produite");
+        trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
+          type: "signup_error",
+          error: data.error,
+        });
         setLoading(false);
         return;
       }
+
+      // Track successful signup
+      trackEvent(AnalyticsEvents.SIGN_UP, {
+        referralCode: referralCode.trim().toUpperCase(),
+        promotionId: promotionId || undefined,
+        promotionName: promotion?.name,
+      });
 
       // Sign in the user
       const result = await signIn("credentials", {
@@ -122,6 +134,9 @@ function SignupForm() {
       }
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
+        type: "signup_exception",
+      });
     } finally {
       setLoading(false);
     }

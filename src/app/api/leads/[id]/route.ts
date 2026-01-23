@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyLeadStatusChanged } from "@/lib/telegram";
 
 // GET single lead
 export async function GET(
@@ -103,6 +104,17 @@ export async function PUT(
             increment: lead.promotion.rewardAmount,
           },
         },
+      });
+    }
+
+    // Send Telegram notification for status change (non-blocking)
+    if (currentLead.status !== status) {
+      notifyLeadStatusChanged({
+        leadName: currentLead.name,
+        referrerName: currentLead.referrer.name,
+        oldStatus: currentLead.status,
+        newStatus: status,
+        promotionName: lead.promotion.name,
       });
     }
 

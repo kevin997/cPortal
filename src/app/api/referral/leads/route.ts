@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyReferralMade } from "@/lib/telegram";
 
 // GET leads for the authenticated referrer
 export async function GET(request: NextRequest) {
@@ -123,9 +124,21 @@ export async function POST(request: NextRequest) {
         referrer: {
           select: {
             name: true,
+            referralCode: true,
           },
         },
       },
+    });
+
+    // Send Telegram notification (non-blocking)
+    notifyReferralMade({
+      leadName: lead.name,
+      leadPhone: lead.phone,
+      leadEmail: lead.email,
+      referrerName: lead.referrer.name,
+      referrerCode: lead.referrer.referralCode || "",
+      promotionName: lead.promotion.name,
+      discountPercent: lead.promotion.discountPercent,
     });
 
     return NextResponse.json(

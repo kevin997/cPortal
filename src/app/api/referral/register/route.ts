@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { notifyAccountCreated } from "@/lib/telegram";
 
 // Validate referral code format (alphanumeric, 4-20 chars, uppercase)
 function isValidReferralCode(code: string): boolean {
@@ -92,6 +93,15 @@ export async function POST(request: NextRequest) {
         walletBalance: true,
         createdAt: true,
       },
+    });
+
+    // Send Telegram notification (non-blocking)
+    notifyAccountCreated({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      referralCode: user.referralCode!,
+      role: "referrer",
     });
 
     return NextResponse.json(user, { status: 201 });

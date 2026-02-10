@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { notifyAccountCreated } from "@/lib/telegram";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 // Validate referral code format (alphanumeric, 4-20 chars, uppercase)
 function isValidReferralCode(code: string): boolean {
@@ -12,7 +13,16 @@ function isValidReferralCode(code: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, password, promotionId, referralCode } = body;
+    const { name, email, phone, password, promotionId, referralCode, turnstileToken } = body;
+
+    // Verify Turnstile token
+    const turnstileResult = await verifyTurnstile(turnstileToken);
+    if (!turnstileResult.success) {
+      return NextResponse.json(
+        { error: turnstileResult.error || "Bot verification failed" },
+        { status: 400 }
+      );
+    }
 
     if (!name || !email || !password || !referralCode) {
       return NextResponse.json(

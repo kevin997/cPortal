@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Gift } from "lucide-react";
 import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
+import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 interface Promotion {
   id: string;
@@ -36,6 +37,8 @@ function SignupForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingPromotion, setLoadingPromotion] = useState(true);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
 
   useEffect(() => {
     async function fetchPromotion() {
@@ -96,6 +99,7 @@ function SignupForm() {
           password,
           promotionId,
           referralCode: referralCode.trim(),
+          turnstileToken,
         }),
       });
 
@@ -103,6 +107,8 @@ function SignupForm() {
 
       if (!response.ok) {
         setError(data.error || "Une erreur s'est produite");
+        setTurnstileToken("");
+        turnstileRef.current?.reset();
         trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
           type: "signup_error",
           error: data.error,
@@ -134,6 +140,8 @@ function SignupForm() {
       }
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
       trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
         type: "signup_exception",
       });
@@ -271,13 +279,19 @@ function SignupForm() {
               />
             </div>
 
+            <TurnstileWidget
+              ref={turnstileRef}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken("")}
+            />
+
             {error && (
               <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading} size="lg">
+            <Button type="submit" className="w-full" disabled={loading || !turnstileToken} size="lg">
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

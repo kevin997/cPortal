@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
+import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 export default function ReferralLoginPage() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function ReferralLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,11 +31,14 @@ export default function ReferralLoginPage() {
       const result = await signIn("credentials", {
         email,
         password,
+        turnstileToken,
         redirect: false,
       });
 
       if (result?.error) {
         setError("Email ou mot de passe incorrect");
+        setTurnstileToken("");
+        turnstileRef.current?.reset();
         trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
           type: "login_error",
           error: "invalid_credentials",
@@ -46,6 +52,8 @@ export default function ReferralLoginPage() {
       }
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
       trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
         type: "login_exception",
       });
@@ -103,13 +111,19 @@ export default function ReferralLoginPage() {
               />
             </div>
 
+            <TurnstileWidget
+              ref={turnstileRef}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken("")}
+            />
+
             {error && (
               <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading} size="lg">
+            <Button type="submit" className="w-full" disabled={loading || !turnstileToken} size="lg">
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

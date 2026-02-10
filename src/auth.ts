@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -9,14 +10,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: {},
         password: {},
+        turnstileToken: {},
       },
       authorize: async (credentials, _request) => {
-        const { email, password } = credentials as {
+        const { email, password, turnstileToken } = credentials as {
           email: string;
           password: string;
+          turnstileToken: string;
         };
 
         if (!email || !password) {
+          return null;
+        }
+
+        // Verify Turnstile token
+        const turnstileResult = await verifyTurnstile(turnstileToken);
+        if (!turnstileResult.success) {
           return null;
         }
 

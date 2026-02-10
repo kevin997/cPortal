@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, use } from "react";
+import { useState, useEffect, useRef, Suspense, use } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Gift, Loader2, CheckCircle, AlertCircle, Percent, User } from "lucide-react";
 import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
+import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 interface Promotion {
   id: string;
@@ -51,6 +52,8 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [invalidCode, setInvalidCode] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -123,6 +126,7 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
           email: email || undefined,
           referralCode,
           promotionId: selectedPromotion,
+          turnstileToken,
         }),
       });
 
@@ -130,6 +134,8 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
 
       if (!response.ok) {
         setError(data.error || "Une erreur s'est produite");
+        setTurnstileToken("");
+        turnstileRef.current?.reset();
         trackEvent(AnalyticsEvents.LEAD_FORM_ERROR, {
           referralCode,
           error: data.error,
@@ -149,6 +155,8 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
       setSuccess(true);
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
       trackEvent(AnalyticsEvents.LEAD_FORM_ERROR, {
         referralCode,
         error: "exception",
@@ -336,6 +344,12 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
                 />
               </div>
 
+              <TurnstileWidget
+                ref={turnstileRef}
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken("")}
+              />
+
               {error && (
                 <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -347,7 +361,7 @@ function LeadCaptureContent({ referralCode }: { referralCode: string }) {
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={submitting || !selectedPromotion}
+                disabled={submitting || !selectedPromotion || !turnstileToken}
               >
                 {submitting ? (
                   <>

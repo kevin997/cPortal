@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileWidgetRef>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,17 +28,22 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email,
         password,
+        turnstileToken,
         redirect: false,
       });
 
       if (result?.error) {
         setError("Invalid email or password");
+        setTurnstileToken("");
+        turnstileRef.current?.reset();
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -85,12 +93,17 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
+            <TurnstileWidget
+              ref={turnstileRef}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken("")}
+            />
             {error && (
               <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                 {error}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !turnstileToken}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>

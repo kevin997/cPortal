@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -35,15 +33,14 @@ export default function LoginPage() {
         setError("Invalid email or password");
         setTurnstileToken("");
         turnstileRef.current?.reset();
+        setLoading(false);
       } else {
-        router.push("/verify-2fa");
-        router.refresh();
+        window.location.href = "/verify-2fa";
       }
-    } catch (error) {
+    } catch {
       setError("An error occurred. Please try again.");
       setTurnstileToken("");
       turnstileRef.current?.reset();
-    } finally {
       setLoading(false);
     }
   };

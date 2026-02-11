@@ -50,24 +50,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // For non-referrer roles: generate 2FA code and send to Telegram
         if (user.role !== "referrer") {
-          const code = generate2FACode();
-          const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+          try {
+            const code = generate2FACode();
+            const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              twoFactorCode: code,
-              twoFactorExpiry: expiry,
-              twoFactorAttempts: 0,
-              twoFactorVerifiedAt: null,
-            },
-          });
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                twoFactorCode: code,
+                twoFactorExpiry: expiry,
+                twoFactorAttempts: 0,
+                twoFactorVerifiedAt: null,
+              },
+            });
 
-          const escapedName = TelegramService.escapeMarkdownV2(user.name);
-          const escapedCode = TelegramService.escapeMarkdownV2(code);
-          const message = `🔐 *2FA Login Code*\n\n👤 *User:* ${escapedName}\n🔑 *Code:* \`${escapedCode}\`\n\n⏰ Expires in 5 minutes`;
+            const escapedName = TelegramService.escapeMarkdownV2(user.name);
+            const escapedCode = TelegramService.escapeMarkdownV2(code);
+            const message = `🔐 *2FA Login Code*\n\n👤 *User:* ${escapedName}\n🔑 *Code:* \`${escapedCode}\`\n\n⏰ Expires in 5 minutes`;
 
-          await TelegramService.sendMessage(message);
+            await TelegramService.sendMessage(message);
+          } catch (error) {
+            console.error("[auth] Failed to generate/send 2FA code:", error);
+            return null;
+          }
 
           return {
             id: user.id,

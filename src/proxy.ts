@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = await getToken({ req: request });
+  const session = await auth();
 
   // /dashboard/* routes
   if (pathname.startsWith("/dashboard")) {
-    // Not authenticated → login
-    if (!token) {
+    if (!session) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Admin without 2FA → verify-2fa
-    if (token.role !== "referrer" && !token.twoFactorVerified) {
+    if (session.user.role !== "referrer" && !session.user.twoFactorVerified) {
       return NextResponse.redirect(new URL("/verify-2fa", request.url));
     }
 
@@ -23,18 +21,15 @@ export async function proxy(request: NextRequest) {
 
   // /verify-2fa route
   if (pathname === "/verify-2fa") {
-    // Not authenticated → login
-    if (!token) {
+    if (!session) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Referrer → referral dashboard
-    if (token.role === "referrer") {
+    if (session.user.role === "referrer") {
       return NextResponse.redirect(new URL("/referral/dashboard", request.url));
     }
 
-    // Already verified → dashboard
-    if (token.twoFactorVerified) {
+    if (session.user.twoFactorVerified) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 

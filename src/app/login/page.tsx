@@ -37,7 +37,7 @@ export default function LoginPage() {
         setTurnstileToken("");
         turnstileRef.current?.reset();
       } else {
-        router.push("/dashboard");
+        router.push("/verify-2fa");
         router.refresh();
       }
     } catch (error) {

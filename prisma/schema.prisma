@@ -19,9 +19,13 @@ model User {
   role          String   @default("sales_agent") // sales_agent, sales_rep, sales_manager, referrer
   avatar        String?
   referralCode  String?  @unique
-  walletBalance Int      @default(0) // Accumulated rewards in XAF
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  walletBalance        Int       @default(0) // Accumulated rewards in XAF
+  twoFactorCode        String?
+  twoFactorExpiry      DateTime?
+  twoFactorAttempts    Int       @default(0)
+  twoFactorVerifiedAt  DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   // Relations
   students    Student[]

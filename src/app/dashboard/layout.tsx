@@ -13,6 +13,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  if (session.user.role !== "referrer" && !session.user.twoFactorVerified) {
+    redirect("/verify-2fa");
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <MobileNav />

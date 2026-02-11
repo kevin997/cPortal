@@ -133,10 +133,9 @@ function SignupForm() {
 
       if (result?.error) {
         setError("Compte créé mais erreur de connexion. Veuillez vous connecter.");
-        router.push("/referral/login");
+        window.location.href = "/referral/login";
       } else {
-        router.push("/referral/dashboard");
-        router.refresh();
+        window.location.href = "/referral/dashboard";
       }
     } catch (error) {
       setError("Une erreur s'est produite. Veuillez réessayer.");

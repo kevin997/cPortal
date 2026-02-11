@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ import { trackEvent, AnalyticsEvents } from "@/hooks/useAnalytics";
 import TurnstileWidget, { type TurnstileWidgetRef } from "@/components/TurnstileWidget";
 
 export default function ReferralLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +29,6 @@ export default function ReferralLoginPage() {
       const result = await signIn("credentials", {
         email,
         password,
-        turnstileToken,
         redirect: false,
       });
 
@@ -39,6 +36,7 @@ export default function ReferralLoginPage() {
         setError("Email ou mot de passe incorrect");
         setTurnstileToken("");
         turnstileRef.current?.reset();
+        setLoading(false);
         trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
           type: "login_error",
           error: "invalid_credentials",
@@ -47,18 +45,16 @@ export default function ReferralLoginPage() {
         trackEvent(AnalyticsEvents.LOGIN, {
           method: "credentials",
         });
-        router.push("/referral/dashboard");
-        router.refresh();
+        window.location.href = "/referral/dashboard";
       }
-    } catch (error) {
+    } catch {
       setError("Une erreur s'est produite. Veuillez réessayer.");
       setTurnstileToken("");
       turnstileRef.current?.reset();
+      setLoading(false);
       trackEvent(AnalyticsEvents.ERROR_OCCURRED, {
         type: "login_exception",
       });
-    } finally {
-      setLoading(false);
     }
   };
 

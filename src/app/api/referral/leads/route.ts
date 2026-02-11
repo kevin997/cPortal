@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyReferralMade } from "@/lib/telegram";
-import { verifyTurnstile } from "@/lib/turnstile";
+import { verifyTurnstile, getClientIp } from "@/lib/turnstile";
 
 // GET leads for the authenticated referrer
 export async function GET(request: NextRequest) {
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
     const { name, phone, email, referralCode, promotionId, turnstileToken } = body;
 
     // Verify Turnstile token
-    const turnstileResult = await verifyTurnstile(turnstileToken);
+    const clientIp = getClientIp(request);
+    const turnstileResult = await verifyTurnstile(turnstileToken, clientIp);
     if (!turnstileResult.success) {
       return NextResponse.json(
         { error: turnstileResult.error || "Bot verification failed" },

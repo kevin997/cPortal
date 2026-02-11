@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { verifyTurnstile } from "@/lib/turnstile";
+import { verifyTurnstile, getClientIp } from "@/lib/turnstile";
 import { TelegramService } from "@/lib/telegram";
 
 function generate2FACode(): string {
@@ -17,7 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
         turnstileToken: {},
       },
-      authorize: async (credentials, _request) => {
+      authorize: async (credentials, request) => {
         try {
           const { email, password, turnstileToken } = credentials as {
             email: string;
@@ -31,7 +31,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           // Verify Turnstile token
-          const turnstileResult = await verifyTurnstile(turnstileToken);
+          const clientIp = request ? getClientIp(request) : undefined;
+          const turnstileResult = await verifyTurnstile(turnstileToken, clientIp);
           if (!turnstileResult.success) {
             console.log("[auth] Turnstile verification failed");
             return null;

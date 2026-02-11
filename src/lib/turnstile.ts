@@ -3,15 +3,18 @@ const TURNSTILE_VERIFY_URL =
 
 interface TurnstileVerifyResponse {
   success: boolean;
-  "error-codes"?: string[];
+  error_codes?: string[];
+  challenge_ts?: string;
+  hostname?: string;
 }
 
 export async function verifyTurnstile(
-  token: string
+  token: string,
+  ip?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
 
-  if (!secret) {
+  if (!secretKey) {
     console.error("TURNSTILE_SECRET_KEY is not set");
     return { success: false, error: "Server configuration error" };
   }
@@ -21,10 +24,17 @@ export async function verifyTurnstile(
   }
 
   try {
+    const formData = new FormData();
+    formData.append("secret", secretKey);
+    formData.append("response", token);
+
+    if (ip) {
+      formData.append("remoteip", ip);
+    }
+
     const response = await fetch(TURNSTILE_VERIFY_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ secret, response: token }),
+      body: formData,
     });
 
     const data: TurnstileVerifyResponse = await response.json();
@@ -42,4 +52,15 @@ export async function verifyTurnstile(
     console.error("Turnstile verification error:", error);
     return { success: false, error: "Verification service unavailable" };
   }
+}
+
+export function getClientIp(request: Request): string | undefined {
+  const headers = request.headers;
+
+  return (
+    headers.get("cf-connecting-ip") ||
+    headers.get("x-real-ip") ||
+    headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    undefined
+  );
 }

@@ -18,41 +18,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         turnstileToken: {},
       },
       authorize: async (credentials, _request) => {
-        const { email, password, turnstileToken } = credentials as {
-          email: string;
-          password: string;
-          turnstileToken: string;
-        };
+        try {
+          const { email, password, turnstileToken } = credentials as {
+            email: string;
+            password: string;
+            turnstileToken: string;
+          };
 
-        if (!email || !password) {
-          return null;
-        }
+          if (!email || !password) {
+            console.log("[auth] Missing email or password");
+            return null;
+          }
 
-        // Verify Turnstile token
-        const turnstileResult = await verifyTurnstile(turnstileToken);
-        if (!turnstileResult.success) {
-          return null;
-        }
+          // Verify Turnstile token
+          const turnstileResult = await verifyTurnstile(turnstileToken);
+          if (!turnstileResult.success) {
+            console.log("[auth] Turnstile verification failed");
+            return null;
+          }
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+          const user = await prisma.user.findUnique({
+            where: { email },
+          });
 
-        if (!user) {
-          return null;
-        }
+          if (!user) {
+            console.log("[auth] User not found:", email);
+            return null;
+          }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+          const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        if (!isPasswordValid) {
-          return null;
-        }
+          if (!isPasswordValid) {
+            console.log("[auth] Invalid password for:", email);
+            return null;
+          }
 
-        // For non-referrer roles: generate 2FA code and send to Telegram
-        if (user.role !== "referrer") {
-          try {
+          console.log("[auth] Password valid for:", email, "role:", user.role);
+
+          // For non-referrer roles: generate 2FA code and send to Telegram
+          if (user.role !== "referrer") {
             const code = generate2FACode();
             const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+            console.log("[auth] Storing 2FA code for:", email);
 
             await prisma.user.update({
               where: { id: user.id },
@@ -64,35 +72,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               },
             });
 
+            console.log("[auth] 2FA code stored, sending Telegram notification");
+
             const escapedName = TelegramService.escapeMarkdownV2(user.name);
             const escapedCode = TelegramService.escapeMarkdownV2(code);
             const message = `🔐 *2FA Login Code*\n\n👤 *User:* ${escapedName}\n🔑 *Code:* \`${escapedCode}\`\n\n⏰ Expires in 5 minutes`;
 
             await TelegramService.sendMessage(message);
-          } catch (error) {
-            console.error("[auth] Failed to generate/send 2FA code:", error);
-            return null;
+
+            console.log("[auth] 2FA setup complete, returning user with twoFactorVerified: false");
+
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              avatar: user.avatar ?? undefined,
+              twoFactorVerified: false,
+            };
           }
 
+          // Referrer: no 2FA needed
+          console.log("[auth] Referrer login, skipping 2FA");
           return {
             id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
             avatar: user.avatar ?? undefined,
-            twoFactorVerified: false,
+            twoFactorVerified: true,
           };
+        } catch (error) {
+          console.error("[auth] authorize() threw an error:", error);
+          return null;
         }
-
-        // Referrer: no 2FA needed
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          avatar: user.avatar ?? undefined,
-          twoFactorVerified: true,
-        };
       },
     }),
   ],

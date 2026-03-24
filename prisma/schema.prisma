@@ -28,9 +28,11 @@ model User {
   updatedAt            DateTime  @updatedAt
 
   // Relations
-  students    Student[]
-  enrollments Enrollment[]
-  leads       Lead[] // Leads referred by this user
+  students       Student[]
+  enrollments    Enrollment[]
+  leads          Lead[] // Leads referred by this user
+  cashOperations CashOperation[]
+  cashSettings   CashSettings?
 
   @@map("users")
 }
@@ -135,4 +137,35 @@ model Enrollment {
 
   @@unique([studentId, bootcampSessionId])
   @@map("enrollments")
+}
+
+// Cash Operation Model (Caisse — entrées/sorties de caisse)
+model CashOperation {
+  id          String   @id @default(cuid())
+  type        String   // "in" (entrée) | "out" (sortie)
+  amount      Int      // Amount in XAF/FCFA
+  category    String
+  description String?  @db.Text
+  date        DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cash_operations")
+}
+
+// Cash Settings Model (targets + Telegram credentials per user)
+model CashSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  annualTarget     Int      @default(50000000)
+  monthlyTarget    Int      @default(4000000)
+  telegramBotToken String?
+  telegramChatId   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("cash_settings")
 }

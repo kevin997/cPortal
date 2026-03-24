@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, Users, Calendar, UserPlus, LogOut, Gift, Menu, X, Target } from "lucide-react";
+import { Home, Users, Calendar, UserPlus, LogOut, Gift, Menu, X, Target, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
@@ -18,6 +18,7 @@ const navItems = [
 const moreNavItems = [
   { href: "/dashboard/promotions", icon: Gift, label: "Promotions" },
   { href: "/dashboard/leads", icon: Target, label: "Leads" },
+  { href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" },
 ];
 
 export function MobileNav() {

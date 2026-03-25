@@ -61,6 +61,20 @@ export default function CaissePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [defaultType, setDefaultType] = useState<"in" | "out">("in");
 
+  // Report period — default: 1st of current month → today
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const monthStartStr = () => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  };
+  const [reportFrom, setReportFrom] = useState(monthStartStr);
+  const [reportTo, setReportTo] = useState(todayStr);
+
+  // History filters
+  const [historyFrom, setHistoryFrom] = useState("");
+  const [historyTo, setHistoryTo] = useState("");
+  const [historyType, setHistoryType] = useState<"all" | "in" | "out">("all");
+
   // Settings field refs for blur-save
   const [annualTarget, setAnnualTarget] = useState("");
   const [monthlyTarget, setMonthlyTarget] = useState("");
@@ -134,25 +148,34 @@ export default function CaissePage() {
     }
     setSendingReport(true);
     try {
-      const now = new Date();
-      const monthName = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startYear = new Date(now.getFullYear(), 0, 1);
+      const from = new Date(reportFrom);
+      const to = new Date(reportTo);
+      // set to end-of-day for the "to" date
+      to.setHours(23, 59, 59, 999);
+
+      const periodLabel = `${from.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })} — ${to.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}`;
+
+      const startYear = new Date(from.getFullYear(), 0, 1);
 
       const yearIn = operations
         .filter((op) => op.type === "in" && new Date(op.date) >= startYear)
         .reduce((s, op) => s + op.amount, 0);
-      const monthIn = operations
-        .filter((op) => op.type === "in" && new Date(op.date) >= startMonth)
+      const periodIn = operations
+        .filter((op) => op.type === "in" && new Date(op.date) >= from && new Date(op.date) <= to)
         .reduce((s, op) => s + op.amount, 0);
-      const rate = settings.monthlyTarget ? ((monthIn / settings.monthlyTarget) * 100).toFixed(1) : "0";
+      const periodOut = operations
+        .filter((op) => op.type === "out" && new Date(op.date) >= from && new Date(op.date) <= to)
+        .reduce((s, op) => s + op.amount, 0);
+      const rate = settings.monthlyTarget ? ((periodIn / settings.monthlyTarget) * 100).toFixed(1) : "0";
 
       const message =
-        `*Rapport Caisse — ${monthName}*\n\n` +
+        `*Rapport Caisse — ${periodLabel}*\n\n` +
         `• CA annuel visé : ${fmt(settings.annualTarget)} FCFA\n` +
-        `• CA cumulé (${now.getFullYear()}) : ${fmt(yearIn)} FCFA\n` +
+        `• CA cumulé (${from.getFullYear()}) : ${fmt(yearIn)} FCFA\n` +
         `• Objectif mensuel : ${fmt(settings.monthlyTarget)} FCFA\n` +
-        `• CA du mois (${monthName}) : ${fmt(monthIn)} FCFA\n` +
+        `• Entrées (période) : ${fmt(periodIn)} FCFA\n` +
+        `• Sorties (période) : ${fmt(periodOut)} FCFA\n` +
+        `• Solde net (période) : ${fmt(periodIn - periodOut)} FCFA\n` +
         `• Taux de réalisation : ${rate}%`;
 
       const res = await fetch("/api/caisse/report", {
@@ -188,6 +211,26 @@ export default function CaissePage() {
 
     return { yearIn, monthIn, rate };
   }, [operations, settings]);
+
+  const filteredOps = useMemo(() => {
+    return operations.filter((op) => {
+      if (historyType !== "all" && op.type !== historyType) return false;
+      const d = new Date(op.date);
+      if (historyFrom && d < new Date(historyFrom)) return false;
+      if (historyTo) {
+        const to = new Date(historyTo);
+        to.setHours(23, 59, 59, 999);
+        if (d > to) return false;
+      }
+      return true;
+    });
+  }, [operations, historyFrom, historyTo, historyType]);
+
+  const historyTotals = useMemo(() => {
+    const totalIn = filteredOps.filter((op) => op.type === "in").reduce((s, op) => s + op.amount, 0);
+    const totalOut = filteredOps.filter((op) => op.type === "out").reduce((s, op) => s + op.amount, 0);
+    return { totalIn, totalOut, net: totalIn - totalOut };
+  }, [filteredOps]);
 
   const openForm = (type: "in" | "out") => {
     setDefaultType(type);
@@ -301,19 +344,48 @@ export default function CaissePage() {
           </div>
 
           {/* Telegram Report */}
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={handleSendReport}
-            disabled={sendingReport}
-          >
-            {sendingReport ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            Envoyer Rapport Telegram
-          </Button>
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <Send className="w-4 h-4 text-muted-foreground" />
+                Rapport Telegram
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="reportFrom" className="text-xs">Du</Label>
+                  <Input
+                    id="reportFrom"
+                    type="date"
+                    value={reportFrom}
+                    onChange={(e) => setReportFrom(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="reportTo" className="text-xs">Au</Label>
+                  <Input
+                    id="reportTo"
+                    type="date"
+                    value={reportTo}
+                    onChange={(e) => setReportTo(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleSendReport}
+                disabled={sendingReport || !reportFrom || !reportTo}
+              >
+                {sendingReport ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Envoyer le rapport
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Recent Operations */}
           <div className="space-y-3">
@@ -375,8 +447,80 @@ export default function CaissePage() {
 
       {/* History Tab */}
       {tab === "history" && (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">{operations.length} opération{operations.length !== 1 ? "s" : ""}</p>
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="space-y-1">
+              <Label htmlFor="hFrom" className="text-xs text-muted-foreground">Du</Label>
+              <Input
+                id="hFrom"
+                type="date"
+                value={historyFrom}
+                onChange={(e) => setHistoryFrom(e.target.value)}
+                className="h-8 text-sm w-36"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="hTo" className="text-xs text-muted-foreground">Au</Label>
+              <Input
+                id="hTo"
+                type="date"
+                value={historyTo}
+                onChange={(e) => setHistoryTo(e.target.value)}
+                className="h-8 text-sm w-36"
+              />
+            </div>
+            <div className="flex gap-1">
+              {(["all", "in", "out"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setHistoryType(t)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                    historyType === t
+                      ? t === "in"
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : t === "out"
+                        ? "bg-rose-600 text-white border-rose-600"
+                        : "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {t === "all" ? "Tout" : t === "in" ? "+ Entrées" : "− Sorties"}
+                </button>
+              ))}
+            </div>
+            {(historyFrom || historyTo || historyType !== "all") && (
+              <button
+                onClick={() => { setHistoryFrom(""); setHistoryTo(""); setHistoryType("all"); }}
+                className="text-xs text-muted-foreground hover:text-foreground underline self-end pb-1.5"
+              >
+                Réinitialiser
+              </button>
+            )}
+          </div>
+
+          {/* Totals summary */}
+          {!loadingOps && filteredOps.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 border border-emerald-200 dark:border-emerald-800">
+                <p className="text-xs text-muted-foreground mb-0.5">Entrées</p>
+                <p className="font-bold text-emerald-600">+{fmt(historyTotals.totalIn)}</p>
+              </div>
+              <div className="bg-rose-50 dark:bg-rose-950/30 rounded-lg p-2 border border-rose-200 dark:border-rose-800">
+                <p className="text-xs text-muted-foreground mb-0.5">Sorties</p>
+                <p className="font-bold text-rose-600">−{fmt(historyTotals.totalOut)}</p>
+              </div>
+              <div className="bg-muted rounded-lg p-2 border">
+                <p className="text-xs text-muted-foreground mb-0.5">Net</p>
+                <p className={`font-bold ${historyTotals.net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {historyTotals.net >= 0 ? "+" : ""}{fmt(historyTotals.net)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">{filteredOps.length} opération{filteredOps.length !== 1 ? "s" : ""}</p>
+
           {loadingOps ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
@@ -385,14 +529,16 @@ export default function CaissePage() {
                 </Card>
               ))}
             </div>
-          ) : operations.length === 0 ? (
+          ) : filteredOps.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground text-sm">
-                Aucune opération enregistrée.
+                {operations.length === 0
+                  ? "Aucune opération enregistrée."
+                  : "Aucune opération pour ces filtres."}
               </CardContent>
             </Card>
           ) : (
-            operations.map((op) => (
+            filteredOps.map((op) => (
               <Card key={op.id} className="group">
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -415,7 +561,7 @@ export default function CaissePage() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <p className={`font-bold text-sm ${op.type === "in" ? "text-emerald-600" : "text-rose-600"}`}>
-                      {op.type === "in" ? "+" : "-"}{fmt(op.amount)}
+                      {op.type === "in" ? "+" : "−"}{fmt(op.amount)}
                     </p>
                     <Button
                       size="icon-sm"

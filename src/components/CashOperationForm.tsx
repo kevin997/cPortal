@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +58,14 @@ export function CashOperationForm({
     description: "",
     date: nowDatetimeLocal(),
   });
+
+  useEffect(() => {
+    if (!open) return;
+    setFormData((prev) => ({
+      ...prev,
+      type: defaultType,
+    }));
+  }, [defaultType, open]);
 
   // Keep type in sync when parent changes defaultType (e.g. shortcut buttons)
   const effectiveType = formData.type as "in" | "out";

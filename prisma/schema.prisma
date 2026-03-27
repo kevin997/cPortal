@@ -32,6 +32,7 @@ model User {
   enrollments    Enrollment[]
   leads          Lead[] // Leads referred by this user
   cashOperations CashOperation[]
+  upcomingPayments UpcomingPayment[]
   cashSettings   CashSettings?
 
   @@map("users")
@@ -168,4 +169,21 @@ model CashSettings {
   updatedAt        DateTime @updatedAt
 
   @@map("cash_settings")
+}
+
+// Upcoming Payment Model (Caisse — paiements planifies)
+model UpcomingPayment {
+  id              String   @id @default(cuid())
+  beneficiaryName String
+  beneficiaryType String   // vendor, investor, partner, other
+  amount          Int
+  dueDate         DateTime
+  status          String   @default("pending") // pending, paid, cancelled
+  notes           String?  @db.Text
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("upcoming_payments")
 }

@@ -14,11 +14,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
-
-    if (!status || !["pending", "paid", "cancelled"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+    const { status, beneficiaryName, beneficiaryType, amount, dueDate, notes } = body;
 
     const existing = await prisma.upcomingPayment.findUnique({ where: { id } });
     if (!existing) {
@@ -28,9 +24,38 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Build update data — status-only update or full edit
+    const data: Record<string, unknown> = {};
+
+    if (status) {
+      if (!["pending", "paid", "cancelled"].includes(status)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      data.status = status;
+    }
+    if (beneficiaryName !== undefined) data.beneficiaryName = beneficiaryName;
+    if (beneficiaryType !== undefined) {
+      if (!["vendor", "investor", "partner", "other"].includes(beneficiaryType)) {
+        return NextResponse.json({ error: "Invalid beneficiary type" }, { status: 400 });
+      }
+      data.beneficiaryType = beneficiaryType;
+    }
+    if (amount !== undefined) {
+      if (typeof amount !== "number" || amount <= 0) {
+        return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+      }
+      data.amount = amount;
+    }
+    if (dueDate !== undefined) data.dueDate = new Date(dueDate);
+    if (notes !== undefined) data.notes = notes || null;
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
     const payment = await prisma.upcomingPayment.update({
       where: { id },
-      data: { status },
+      data,
     });
 
     return NextResponse.json(payment);

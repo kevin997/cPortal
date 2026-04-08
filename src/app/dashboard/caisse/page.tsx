@@ -9,6 +9,7 @@ import {
   History,
   Send,
   Trash2,
+  Pencil,
   ChevronRight,
   TrendingUp,
   Target,
@@ -127,6 +128,8 @@ export default function CaissePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [upcomingFormOpen, setUpcomingFormOpen] = useState(false);
   const [defaultType, setDefaultType] = useState<"in" | "out">("in");
+  const [editingOperation, setEditingOperation] = useState<CashOperation | null>(null);
+  const [editingPayment, setEditingPayment] = useState<UpcomingPayment | null>(null);
 
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const monthStartStr = () => {
@@ -253,8 +256,8 @@ export default function CaissePage() {
           status === "paid"
             ? "Paiement marque comme paye"
             : status === "cancelled"
-            ? "Paiement annule"
-            : "Paiement reactive",
+              ? "Paiement annule"
+              : "Paiement reactive",
         variant: "success",
       });
     } catch {
@@ -368,8 +371,25 @@ export default function CaissePage() {
   }, [upcomingPayments, upcomingStatus]);
 
   const openForm = (type: "in" | "out") => {
+    setEditingOperation(null);
     setDefaultType(type);
     setFormOpen(true);
+  };
+
+  const openEditOperation = (op: CashOperation) => {
+    setEditingOperation(op);
+    setDefaultType(op.type);
+    setFormOpen(true);
+  };
+
+  const openEditPayment = (payment: UpcomingPayment) => {
+    setEditingPayment(payment);
+    setUpcomingFormOpen(true);
+  };
+
+  const openNewPayment = () => {
+    setEditingPayment(null);
+    setUpcomingFormOpen(true);
   };
 
   return (
@@ -385,7 +405,7 @@ export default function CaissePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setUpcomingFormOpen(true)}>
+          <Button size="sm" variant="outline" onClick={openNewPayment}>
             <CalendarClock className="h-4 w-4" />
             <span className="hidden sm:inline">Paiement a venir</span>
           </Button>
@@ -419,11 +439,10 @@ export default function CaissePage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                tab === t
+              className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${tab === t
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               <Icon className="h-4 w-4" />
               {labels[t]}
@@ -507,7 +526,7 @@ export default function CaissePage() {
               Sortie
             </button>
             <button
-              onClick={() => setUpcomingFormOpen(true)}
+              onClick={openNewPayment}
               className="flex flex-col items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-5 font-semibold text-amber-700 transition-colors hover:bg-amber-100"
             >
               <CalendarClock className="h-8 w-8" />
@@ -582,11 +601,10 @@ export default function CaissePage() {
                       <CardContent className="flex items-center justify-between gap-3 p-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                              op.type === "in"
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${op.type === "in"
                                 ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                                 : "bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-                            }`}
+                              }`}
                           >
                             {op.type === "in" ? <PlusCircle className="h-5 w-5" /> : <MinusCircle className="h-5 w-5" />}
                           </div>
@@ -671,25 +689,24 @@ export default function CaissePage() {
               <button
                 key={status}
                 onClick={() => setUpcomingStatus(status)}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  upcomingStatus === status
+                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${upcomingStatus === status
                     ? status === "pending"
                       ? "border-amber-500 bg-amber-500 text-white"
                       : status === "paid"
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : status === "cancelled"
-                      ? "border-rose-600 bg-rose-600 text-white"
-                      : "border-primary bg-primary text-primary-foreground"
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : status === "cancelled"
+                          ? "border-rose-600 bg-rose-600 text-white"
+                          : "border-primary bg-primary text-primary-foreground"
                     : "border-border text-muted-foreground hover:bg-accent"
-                }`}
+                  }`}
               >
                 {status === "all"
                   ? "Tout"
                   : status === "pending"
-                  ? "En attente"
-                  : status === "paid"
-                  ? "Payes"
-                  : "Annules"}
+                    ? "En attente"
+                    : status === "paid"
+                      ? "Payes"
+                      : "Annules"}
               </button>
             ))}
           </div>
@@ -782,6 +799,14 @@ export default function CaissePage() {
                     <Button
                       size="icon-sm"
                       variant="ghost"
+                      onClick={() => openEditPayment(payment)}
+                      className="hover:text-primary"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
                       onClick={() => handleDeleteUpcomingPayment(payment.id)}
                       className="text-destructive hover:text-destructive"
                     >
@@ -823,15 +848,14 @@ export default function CaissePage() {
                 <button
                   key={t}
                   onClick={() => setHistoryType(t)}
-                  className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    historyType === t
+                  className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${historyType === t
                       ? t === "in"
                         ? "border-emerald-600 bg-emerald-600 text-white"
                         : t === "out"
-                        ? "border-rose-600 bg-rose-600 text-white"
-                        : "border-primary bg-primary text-primary-foreground"
+                          ? "border-rose-600 bg-rose-600 text-white"
+                          : "border-primary bg-primary text-primary-foreground"
                       : "border-border text-muted-foreground hover:bg-accent"
-                  }`}
+                    }`}
                 >
                   {t === "all" ? "Tout" : t === "in" ? "+ Entrees" : "- Sorties"}
                 </button>
@@ -897,11 +921,10 @@ export default function CaissePage() {
                 <CardContent className="flex items-center justify-between gap-3 p-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        op.type === "in"
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${op.type === "in"
                           ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                           : "bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-                      }`}
+                        }`}
                     >
                       {op.type === "in" ? <PlusCircle className="h-5 w-5" /> : <MinusCircle className="h-5 w-5" />}
                     </div>
@@ -918,6 +941,14 @@ export default function CaissePage() {
                       {op.type === "in" ? "+" : "-"}
                       {fmt(op.amount)}
                     </p>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => openEditOperation(op)}
+                      className="opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="icon-sm"
                       variant="ghost"
@@ -1005,14 +1036,22 @@ export default function CaissePage() {
 
       <CashOperationForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingOperation(null);
+        }}
         defaultType={defaultType}
+        editData={editingOperation}
         onSuccess={fetchOperations}
       />
 
       <UpcomingPaymentForm
         open={upcomingFormOpen}
-        onOpenChange={setUpcomingFormOpen}
+        onOpenChange={(open) => {
+          setUpcomingFormOpen(open);
+          if (!open) setEditingPayment(null);
+        }}
+        editData={editingPayment}
         onSuccess={fetchUpcomingPayments}
       />
     </div>

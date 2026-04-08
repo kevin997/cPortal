@@ -31,10 +31,20 @@ const CATEGORIES = [
   "Autre",
 ];
 
+interface CashOperationEditData {
+  id: string;
+  type: "in" | "out";
+  amount: number;
+  category: string;
+  description: string | null;
+  date: string;
+}
+
 interface CashOperationFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: "in" | "out";
+  editData?: CashOperationEditData | null;
   onSuccess: () => void;
 }
 
@@ -44,10 +54,17 @@ function nowDatetimeLocal() {
   return d.toISOString().slice(0, 16);
 }
 
+function toDatetimeLocal(iso: string) {
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 export function CashOperationForm({
   open,
   onOpenChange,
   defaultType = "in",
+  editData,
   onSuccess,
 }: CashOperationFormProps) {
   const [loading, setLoading] = useState(false);
@@ -59,13 +76,28 @@ export function CashOperationForm({
     date: nowDatetimeLocal(),
   });
 
+  const isEditing = !!editData;
+
   useEffect(() => {
     if (!open) return;
-    setFormData((prev) => ({
-      ...prev,
-      type: defaultType,
-    }));
-  }, [defaultType, open]);
+    if (editData) {
+      setFormData({
+        type: editData.type,
+        amount: String(editData.amount),
+        category: editData.category,
+        description: editData.description ?? "",
+        date: toDatetimeLocal(editData.date),
+      });
+    } else {
+      setFormData({
+        type: defaultType,
+        amount: "",
+        category: "",
+        description: "",
+        date: nowDatetimeLocal(),
+      });
+    }
+  }, [defaultType, open, editData]);
 
   // Keep type in sync when parent changes defaultType (e.g. shortcut buttons)
   const effectiveType = formData.type as "in" | "out";
@@ -79,16 +111,23 @@ export function CashOperationForm({
     setLoading(true);
 
     try {
-      const response = await fetch("/api/caisse/operations", {
-        method: "POST",
+      const payload = {
+        type: effectiveType,
+        amount: Number(formData.amount),
+        category: formData.category,
+        description: formData.description || null,
+        date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
+      };
+
+      const url = isEditing
+        ? `/api/caisse/operations/${editData!.id}`
+        : "/api/caisse/operations";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: effectiveType,
-          amount: Number(formData.amount),
-          category: formData.category,
-          description: formData.description || null,
-          date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -97,7 +136,11 @@ export function CashOperationForm({
       }
 
       toast({
-        title: effectiveType === "in" ? "Entrée enregistrée" : "Sortie enregistrée",
+        title: isEditing
+          ? "Opération modifiée"
+          : effectiveType === "in"
+            ? "Entrée enregistrée"
+            : "Sortie enregistrée",
         description: `${Number(formData.amount).toLocaleString("fr-FR")} FCFA — ${formData.category}`,
         variant: "success",
       });
@@ -130,11 +173,16 @@ export function CashOperationForm({
       <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>
-            {isIn ? "Nouvelle Entrée" : "Nouvelle Sortie"}
+            {isEditing
+              ? "Modifier l'opération"
+              : isIn
+                ? "Nouvelle Entrée"
+                : "Nouvelle Sortie"}
           </DialogTitle>
           <DialogDescription>
-            Enregistrez une{" "}
-            {isIn ? "entrée" : "sortie"} de caisse
+            {isEditing
+              ? "Modifiez les détails de l'opération"
+              : `Enregistrez une ${isIn ? "entrée" : "sortie"} de caisse`}
           </DialogDescription>
         </DialogHeader>
 
@@ -144,22 +192,20 @@ export function CashOperationForm({
             <button
               type="button"
               onClick={() => handleChange("type", "in")}
-              className={`py-2 rounded-md text-sm font-medium border transition-colors ${
-                isIn
+              className={`py-2 rounded-md text-sm font-medium border transition-colors ${isIn
                   ? "bg-emerald-600 text-white border-emerald-600"
                   : "border-border text-muted-foreground hover:bg-accent"
-              }`}
+                }`}
             >
               + Entrée
             </button>
             <button
               type="button"
               onClick={() => handleChange("type", "out")}
-              className={`py-2 rounded-md text-sm font-medium border transition-colors ${
-                !isIn
+              className={`py-2 rounded-md text-sm font-medium border transition-colors ${!isIn
                   ? "bg-rose-600 text-white border-rose-600"
                   : "border-border text-muted-foreground hover:bg-accent"
-              }`}
+                }`}
             >
               − Sortie
             </button>
@@ -247,7 +293,11 @@ export function CashOperationForm({
                   : "bg-rose-600 hover:bg-rose-700"
               }
             >
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading
+                ? "Enregistrement..."
+                : isEditing
+                  ? "Modifier"
+                  : "Enregistrer"}
             </Button>
           </DialogFooter>
         </form>

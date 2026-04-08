@@ -29,9 +29,19 @@ const BENEFICIARY_TYPES = [
   { value: "other", label: "Autre" },
 ] as const;
 
+interface UpcomingPaymentEditData {
+  id: string;
+  beneficiaryName: string;
+  beneficiaryType: "vendor" | "investor" | "partner" | "other";
+  amount: number;
+  dueDate: string;
+  notes: string | null;
+}
+
 interface UpcomingPaymentFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editData?: UpcomingPaymentEditData | null;
   onSuccess: () => void;
 }
 
@@ -52,19 +62,35 @@ function getInitialFormData() {
   };
 }
 
+function toDateInput(iso: string) {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
 export function UpcomingPaymentForm({
   open,
   onOpenChange,
+  editData,
   onSuccess,
 }: UpcomingPaymentFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(getInitialFormData);
 
+  const isEditing = !!editData;
+
   useEffect(() => {
-    if (!open) {
+    if (!open) return;
+    if (editData) {
+      setFormData({
+        beneficiaryName: editData.beneficiaryName,
+        beneficiaryType: editData.beneficiaryType,
+        amount: String(editData.amount),
+        dueDate: toDateInput(editData.dueDate),
+        notes: editData.notes ?? "",
+      });
+    } else {
       setFormData(getInitialFormData());
     }
-  }, [open]);
+  }, [open, editData]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -75,16 +101,23 @@ export function UpcomingPaymentForm({
     setLoading(true);
 
     try {
-      const response = await fetch("/api/caisse/upcoming-payments", {
-        method: "POST",
+      const payload = {
+        beneficiaryName: formData.beneficiaryName.trim(),
+        beneficiaryType: formData.beneficiaryType,
+        amount: Number(formData.amount),
+        dueDate: new Date(formData.dueDate).toISOString(),
+        notes: formData.notes.trim() || null,
+      };
+
+      const url = isEditing
+        ? `/api/caisse/upcoming-payments/${editData!.id}`
+        : "/api/caisse/upcoming-payments";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          beneficiaryName: formData.beneficiaryName.trim(),
-          beneficiaryType: formData.beneficiaryType,
-          amount: Number(formData.amount),
-          dueDate: new Date(formData.dueDate).toISOString(),
-          notes: formData.notes.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -93,7 +126,7 @@ export function UpcomingPaymentForm({
       }
 
       toast({
-        title: "Paiement planifie",
+        title: isEditing ? "Paiement modifie" : "Paiement planifie",
         description: `${Number(formData.amount).toLocaleString("fr-FR")} FCFA pour ${formData.beneficiaryName}`,
         variant: "success",
       });
@@ -116,9 +149,13 @@ export function UpcomingPaymentForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>Nouveau paiement a venir</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Modifier le paiement" : "Nouveau paiement a venir"}
+          </DialogTitle>
           <DialogDescription>
-            Ajoutez une sortie prevue pour un fournisseur, investisseur ou partenaire.
+            {isEditing
+              ? "Modifiez les details du paiement planifie."
+              : "Ajoutez une sortie prevue pour un fournisseur, investisseur ou partenaire."}
           </DialogDescription>
         </DialogHeader>
 
@@ -215,7 +252,11 @@ export function UpcomingPaymentForm({
                 !formData.dueDate
               }
             >
-              {loading ? "Enregistrement..." : "Planifier"}
+              {loading
+                ? "Enregistrement..."
+                : isEditing
+                  ? "Modifier"
+                  : "Planifier"}
             </Button>
           </DialogFooter>
         </form>

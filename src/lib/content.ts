@@ -36,6 +36,14 @@ export const COLLABORATOR_ROLE_OPTIONS = [
   { value: "collaborator", label: "Collaborateur" },
 ] as const;
 
+export const SOCIAL_MEDIA_PLAN_STATUSES = [
+  { value: "planned", label: "Planifie" },
+  { value: "in_review", label: "En relecture" },
+  { value: "approved", label: "Approuve" },
+  { value: "published", label: "Publie" },
+  { value: "archived", label: "Archive" },
+] as const;
+
 export function getCreativeRequestStatusLabel(value: string) {
   return CREATIVE_REQUEST_STATUSES.find((item) => item.value === value)?.label ?? value;
 }
@@ -46,4 +54,8 @@ export function getCreativeDeliverableStatusLabel(value: string) {
 
 export function getCollaboratorRoleLabel(value: string) {
   return COLLABORATOR_ROLE_OPTIONS.find((item) => item.value === value)?.label ?? value;
+}
+
+export function getSocialMediaPlanStatusLabel(value: string) {
+  return SOCIAL_MEDIA_PLAN_STATUSES.find((item) => item.value === value)?.label ?? value;
 }

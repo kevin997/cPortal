@@ -17,6 +17,8 @@ import {
   CREATIVE_VALIDATION_OPTIONS,
   getCollaboratorRoleLabel,
 } from "@/lib/content";
+import { canSelectSocialMediaPlansForRequests } from "@/lib/access";
+import { useSession } from "next-auth/react";
 
 interface CollaboratorOption {
   id: string;
@@ -28,7 +30,17 @@ interface CreativeRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   collaborators: CollaboratorOption[];
+  socialMediaPlans: SocialMediaPlanOption[];
   onSuccess: () => void;
+}
+
+interface SocialMediaPlanOption {
+  id: string;
+  title: string;
+  platform: string | null;
+  scheduledFor: string;
+  captionHtml: string | null;
+  adCopyHtml: string | null;
 }
 
 function todayDate() {
@@ -94,14 +106,17 @@ const initialForm = () => ({
   workflowResponsible: "",
   workflowDate: "",
   assignedToId: "none",
+  socialMediaPlanId: "none",
 });
 
 export function CreativeRequestForm({
   open,
   onOpenChange,
   collaborators,
+  socialMediaPlans,
   onSuccess,
 }: CreativeRequestFormProps) {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [files, setFiles] = useState<File[]>([]);
@@ -125,6 +140,8 @@ export function CreativeRequestForm({
       const payload = {
         ...formData,
         assignedToId: formData.assignedToId === "none" ? null : formData.assignedToId,
+        socialMediaPlanId:
+          formData.socialMediaPlanId === "none" ? null : formData.socialMediaPlanId,
       };
 
       const response = await fetch("/api/content/requests", {
@@ -186,6 +203,12 @@ export function CreativeRequestForm({
       <span>{label}</span>
     </label>
   );
+
+  const selectedPlan =
+    formData.socialMediaPlanId !== "none"
+      ? socialMediaPlans.find((plan) => plan.id === formData.socialMediaPlanId)
+      : null;
+  const canSelectPlan = canSelectSocialMediaPlansForRequests(session?.user?.role);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,7 +275,43 @@ export function CreativeRequestForm({
                     </SelectContent>
                   </Select>
                 </div>
+                {canSelectPlan && (
+                  <div className="space-y-2 xl:col-span-3">
+                    <Label htmlFor="socialMediaPlanId">Texte social media a utiliser</Label>
+                    <Select value={formData.socialMediaPlanId} onValueChange={(value) => setField("socialMediaPlanId", value)}>
+                      <SelectTrigger id="socialMediaPlanId">
+                        <SelectValue placeholder="Choisir un plan social media" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun texte selectionne</SelectItem>
+                        {socialMediaPlans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.title} - {new Date(plan.scheduledFor).toLocaleDateString("fr-FR")} {plan.platform ? `- ${plan.platform}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
+              {selectedPlan && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-lg border p-4">
+                    <p className="mb-2 text-xs uppercase text-muted-foreground">Texte d'accompagnement selectionne</p>
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: selectedPlan.captionHtml || "<p>Aucun texte.</p>" }}
+                    />
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy selectionne</p>
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: selectedPlan.adCopyHtml || "<p>Aucun ad copy.</p>" }}
+                    />
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="space-y-4">

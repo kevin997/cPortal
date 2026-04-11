@@ -33,6 +33,7 @@ export async function GET() {
         assets: {
           orderBy: [{ createdAt: "desc" }],
         },
+        socialMediaPlan: true,
       },
       orderBy: [{ publicationDate: "asc" }, { createdAt: "desc" }],
     });
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
     const reference = body.reference?.trim();
     const requesterName = body.requesterName?.trim();
     const contentType = body.contentType?.trim();
+    const socialMediaPlanId = body.socialMediaPlanId || null;
 
     if (!reference || !requesterName || !contentType) {
       return NextResponse.json(
@@ -65,6 +67,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const selectedPlan = socialMediaPlanId
+      ? await prisma.socialMediaPlan.findUnique({
+          where: { id: socialMediaPlanId },
+        })
+      : null;
 
     const created = await prisma.creativeRequest.create({
       data: {
@@ -121,6 +129,10 @@ export async function POST(request: NextRequest) {
         workflowResponsible: body.workflowResponsible?.trim() || null,
         workflowDate: parseOptionalDate(body.workflowDate),
         assignedToId: body.assignedToId || null,
+        socialMediaPlanId,
+        socialMediaPlanTitle: selectedPlan?.title || null,
+        socialMediaCaptionHtml: selectedPlan?.captionHtml || null,
+        socialMediaAdCopyHtml: selectedPlan?.adCopyHtml || null,
         createdById: session.user.id,
       },
       include: {
@@ -132,6 +144,7 @@ export async function POST(request: NextRequest) {
         },
         deliverables: true,
         assets: true,
+        socialMediaPlan: true,
       },
     });
 

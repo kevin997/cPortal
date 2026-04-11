@@ -32,3 +32,11 @@ export function hasContentCreationAccess(role?: string | null) {
 export function canManageCollaborators(role?: string | null) {
   return isAdminRole(role);
 }
+
+export function canEditSocialMediaPlans(role?: string | null) {
+  return role === "admin" || role === "social_media_manager" || role === "sales_manager";
+}
+
+export function canSelectSocialMediaPlansForRequests(role?: string | null) {
+  return role === "admin" || role === "sales_manager";
+}

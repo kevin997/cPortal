@@ -42,6 +42,7 @@ model User {
   createdCreativeDeliverables CreativeDeliverable[] @relation("CreativeDeliverableCreator")
   ownedCreativeDeliverables   CreativeDeliverable[] @relation("CreativeDeliverableOwner")
   uploadedCreativeAssets      CreativeAsset[]        @relation("CreativeAssetUploader")
+  createdSocialMediaPlans     SocialMediaPlan[]      @relation("SocialMediaPlanCreator")
 
   @@map("users")
 }
@@ -252,6 +253,10 @@ model CreativeRequest {
   workflowDate             DateTime?
   createdById              String
   assignedToId             String?
+  socialMediaPlanId        String?
+  socialMediaPlanTitle     String?
+  socialMediaCaptionHtml   String?  @db.Text
+  socialMediaAdCopyHtml    String?  @db.Text
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -259,10 +264,12 @@ model CreativeRequest {
   assignedTo  User?                 @relation("CreativeRequestAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   deliverables CreativeDeliverable[]
   assets      CreativeAsset[]
+  socialMediaPlan SocialMediaPlan?  @relation(fields: [socialMediaPlanId], references: [id], onDelete: SetNull)
 
   @@index([publicationDate])
   @@index([workflowStatus])
   @@index([assignedToId])
+  @@index([socialMediaPlanId])
   @@map("creative_requests")
 }
 
@@ -309,4 +316,26 @@ model CreativeAsset {
   @@index([requestId])
   @@index([resourceType])
   @@map("creative_assets")
+}
+
+model SocialMediaPlan {
+  id             String   @id @default(cuid())
+  title          String
+  platform       String?
+  campaignName   String?
+  scheduledFor   DateTime
+  status         String   @default("planned") // planned, in_review, approved, published, archived
+  captionHtml    String?  @db.Text
+  adCopyHtml     String?  @db.Text
+  briefHtml      String?  @db.Text
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdBy       User              @relation("SocialMediaPlanCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  creativeRequests CreativeRequest[]
+
+  @@index([scheduledFor])
+  @@index([status])
+  @@map("social_media_plans")
 }

@@ -25,6 +25,14 @@ export async function PUT(
       return NextResponse.json({ error: "Creative request not found" }, { status: 404 });
     }
 
+    const socialMediaPlanId =
+      body.socialMediaPlanId === undefined ? existing.socialMediaPlanId : body.socialMediaPlanId || null;
+    const selectedPlan = socialMediaPlanId
+      ? await prisma.socialMediaPlan.findUnique({
+          where: { id: socialMediaPlanId },
+        })
+      : null;
+
     const updated = await prisma.creativeRequest.update({
       where: { id },
       data: {
@@ -88,6 +96,10 @@ export async function PUT(
         workflowDate:
           body.workflowDate === undefined ? undefined : parseOptionalDate(body.workflowDate),
         assignedToId: body.assignedToId === undefined ? undefined : body.assignedToId || null,
+        socialMediaPlanId,
+        socialMediaPlanTitle: selectedPlan?.title || null,
+        socialMediaCaptionHtml: selectedPlan?.captionHtml || null,
+        socialMediaAdCopyHtml: selectedPlan?.adCopyHtml || null,
       },
       include: {
         createdBy: {
@@ -107,6 +119,7 @@ export async function PUT(
         assets: {
           orderBy: [{ createdAt: "desc" }],
         },
+        socialMediaPlan: true,
       },
     });
 

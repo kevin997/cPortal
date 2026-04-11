@@ -13,6 +13,7 @@ import {
   Send,
   Sparkles,
   X,
+  Megaphone,
 } from "lucide-react";
 import { CreativeAssetGallery, type CreativeAssetItem } from "@/components/CreativeAssetGallery";
 import { CreativeDeliverableForm } from "@/components/CreativeDeliverableForm";
@@ -27,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { canSelectSocialMediaPlansForRequests } from "@/lib/access";
 import {
   CREATIVE_DELIVERABLE_STATUSES,
   CREATIVE_REQUEST_STATUSES,
@@ -81,6 +83,18 @@ interface CreativeRequest {
   } | null;
   deliverables: Deliverable[];
   assets: CreativeAssetItem[];
+  socialMediaPlanTitle: string | null;
+  socialMediaCaptionHtml: string | null;
+  socialMediaAdCopyHtml: string | null;
+}
+
+interface SocialMediaPlan {
+  id: string;
+  title: string;
+  platform: string | null;
+  scheduledFor: string;
+  captionHtml: string | null;
+  adCopyHtml: string | null;
 }
 
 function formatDate(value: string | null) {
@@ -109,6 +123,7 @@ export default function CreationContenuPage() {
   const [deliverableFormOpen, setDeliverableFormOpen] = useState(false);
   const [requests, setRequests] = useState<CreativeRequest[]>([]);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [socialMediaPlans, setSocialMediaPlans] = useState<SocialMediaPlan[]>([]);
   const [reportHours, setReportHours] = useState("24");
   const [sendingReport, setSendingReport] = useState(false);
   const [activeTab, setActiveTab] = useState("requests");
@@ -122,22 +137,25 @@ export default function CreationContenuPage() {
 
   const fetchData = async () => {
     try {
-      const [requestsResponse, collaboratorsResponse] = await Promise.all([
+      const [requestsResponse, collaboratorsResponse, socialMediaPlansResponse] = await Promise.all([
         fetch("/api/content/requests"),
         fetch("/api/content/collaborators"),
+        fetch("/api/social-media/plans"),
       ]);
 
-      if (!requestsResponse.ok || !collaboratorsResponse.ok) {
+      if (!requestsResponse.ok || !collaboratorsResponse.ok || !socialMediaPlansResponse.ok) {
         throw new Error("Failed to fetch content data");
       }
 
-      const [requestsData, collaboratorsData] = await Promise.all([
+      const [requestsData, collaboratorsData, socialMediaPlansData] = await Promise.all([
         requestsResponse.json(),
         collaboratorsResponse.json(),
+        socialMediaPlansResponse.json(),
       ]);
 
       setRequests(requestsData);
       setCollaborators(collaboratorsData);
+      setSocialMediaPlans(socialMediaPlansData);
     } catch {
       toast({
         title: "Erreur",
@@ -548,6 +566,38 @@ export default function CreationContenuPage() {
                     </div>
                   )}
 
+                  {(request.socialMediaPlanTitle || request.socialMediaCaptionHtml || request.socialMediaAdCopyHtml) && (
+                    <div className="space-y-3 rounded-lg border p-4">
+                      <div className="flex items-center gap-2">
+                        <Megaphone className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-medium">
+                          Texte social media selectionne
+                          {request.socialMediaPlanTitle ? `: ${request.socialMediaPlanTitle}` : ""}
+                        </p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-md bg-muted/40 p-3">
+                          <p className="mb-2 text-xs uppercase text-muted-foreground">Caption</p>
+                          <div
+                            className="prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: request.socialMediaCaptionHtml || "<p>Aucun texte selectionne.</p>",
+                            }}
+                          />
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-3">
+                          <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy</p>
+                          <div
+                            className="prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: request.socialMediaAdCopyHtml || "<p>Aucun ad copy selectionne.</p>",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
@@ -692,6 +742,11 @@ export default function CreationContenuPage() {
         open={requestFormOpen}
         onOpenChange={setRequestFormOpen}
         collaborators={collaborators}
+        socialMediaPlans={
+          canSelectSocialMediaPlansForRequests(session?.user?.role)
+            ? socialMediaPlans
+            : []
+        }
         onSuccess={fetchData}
       />
 

@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Palette,
   UserCog,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canManageCollaborators, hasCaisseAccess, hasContentCreationAccess } from "@/lib/access";
@@ -40,6 +41,9 @@ export function MobileNav() {
     { href: "/dashboard/leads", icon: Target, label: "Leads" },
     ...(hasContentCreationAccess(role)
       ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Creation" }]
+      : []),
+    ...(hasContentCreationAccess(role)
+      ? [{ href: "/dashboard/social-media-calendar", icon: CalendarDays, label: "SM Calendar" }]
       : []),
     ...(hasCaisseAccess(role)
       ? [{ href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" }]

@@ -16,7 +16,7 @@ model User {
   phone         String?
   name          String
   password      String
-  role          String   @default("sales_agent") // sales_agent, sales_rep, sales_manager, referrer
+  role          String   @default("sales_agent") // admin, creative_director, social_media_manager, collaborator, sales_agent, sales_rep, sales_manager, referrer
   avatar        String?
   referralCode  String?  @unique
   walletBalance        Int       @default(0) // Accumulated rewards in XAF
@@ -34,6 +34,13 @@ model User {
   cashOperations CashOperation[]
   upcomingPayments UpcomingPayment[]
   cashSettings   CashSettings?
+  createdUsers   User[]                  @relation("UserCreator")
+  createdBy      User?                   @relation("UserCreator", fields: [createdById], references: [id])
+  createdById    String?
+  createdCreativeRequests  CreativeRequest[]     @relation("CreativeRequestCreator")
+  assignedCreativeRequests CreativeRequest[]     @relation("CreativeRequestAssignee")
+  createdCreativeDeliverables CreativeDeliverable[] @relation("CreativeDeliverableCreator")
+  ownedCreativeDeliverables   CreativeDeliverable[] @relation("CreativeDeliverableOwner")
 
   @@map("users")
 }
@@ -186,4 +193,97 @@ model UpcomingPayment {
   updatedAt       DateTime @updatedAt
 
   @@map("upcoming_payments")
+}
+
+model CreativeRequest {
+  id                       String   @id @default(cuid())
+  reference                String   @unique
+  requestDate              DateTime
+  requesterName            String
+  requesterFunction        String?
+  servicePole              String?
+  clientName               String?
+  accountManager           String?
+  clientApproverContact    String?
+  contentType              String
+  platform                 String?
+  objective                String?
+  campaignName             String?
+  mainMessage              String?  @db.Text
+  callToAction             String?
+  copyProvided             Boolean  @default(false)
+  copywriterName           String?
+  desiredFormat            String?
+  quantity                 Int?
+  language                 String?
+  includeLogo              Boolean  @default(false)
+  brandGuidelinesProvided  Boolean  @default(false)
+  priceToDisplay           String?
+  dateToDisplay            String?
+  timeToDisplay            String?
+  locationToDisplay        String?
+  contactNumber            String?
+  linkUrl                  String?
+  hashtags                 String?  @db.Text
+  legalMentions            String?  @db.Text
+  partnersSponsors         String?
+  mandatoryElements        String?  @db.Text
+  photosAvailable          Boolean  @default(false)
+  videosAvailable          Boolean  @default(false)
+  logoAvailable            Boolean  @default(false)
+  sourceTextAvailable      Boolean  @default(false)
+  visualReferences         String?  @db.Text
+  referenceLinks           String?  @db.Text
+  assetLocation            String?
+  creativeDueDate          DateTime?
+  publicationDate          DateTime?
+  publicationTime          String?
+  urgency                  String   @default("normal") // normal, urgent, overdue
+  validationRequired       String   @default("internal_only") // internal_only, client_internal
+  feedbackRounds           Int?
+  requesterValidation      String?
+  marketingValidation      String?
+  clientValidation         String?
+  finalValidation          String?
+  additionalNotes          String?  @db.Text
+  workflowStatus           String   @default("brief_received")
+  workflowResponsible      String?
+  workflowDate             DateTime?
+  createdById              String
+  assignedToId             String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  createdBy   User                  @relation("CreativeRequestCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo  User?                 @relation("CreativeRequestAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  deliverables CreativeDeliverable[]
+
+  @@index([publicationDate])
+  @@index([workflowStatus])
+  @@index([assignedToId])
+  @@map("creative_requests")
+}
+
+model CreativeDeliverable {
+  id          String   @id @default(cuid())
+  requestId   String
+  title       String
+  platform    String?
+  format      String?
+  scheduledFor DateTime
+  status      String   @default("planned") // planned, in_progress, delivered, published
+  notes       String?  @db.Text
+  createdById String
+  ownerId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  request   CreativeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdBy User            @relation("CreativeDeliverableCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  owner     User?           @relation("CreativeDeliverableOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([ownerId])
+  @@map("creative_deliverables")
 }

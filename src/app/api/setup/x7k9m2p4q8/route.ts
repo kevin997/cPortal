@@ -12,7 +12,14 @@ interface CreateUserRequest {
   email: string;
   name: string;
   password: string;
-  role: "sales_agent" | "sales_rep" | "sales_manager" | "admin";
+  role:
+    | "sales_agent"
+    | "sales_rep"
+    | "sales_manager"
+    | "creative_director"
+    | "social_media_manager"
+    | "collaborator"
+    | "admin";
 }
 
 interface BulkCreateRequest {
@@ -80,7 +87,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const validRoles = ["sales_agent", "sales_rep", "sales_manager", "admin"];
+      const validRoles = [
+        "sales_agent",
+        "sales_rep",
+        "sales_manager",
+        "creative_director",
+        "social_media_manager",
+        "collaborator",
+        "admin",
+      ];
       if (!validRoles.includes(role)) {
         return NextResponse.json(
           { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },

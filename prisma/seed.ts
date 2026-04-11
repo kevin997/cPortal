@@ -42,7 +42,29 @@ async function main() {
     },
   });
 
-  console.log("Users created:", { agent, rep, manager });
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@cportal.com" },
+    update: {},
+    create: {
+      email: "admin@cportal.com",
+      name: "Platform Admin",
+      password: hashedPassword,
+      role: "admin",
+    },
+  });
+
+  const creativeDirector = await prisma.user.upsert({
+    where: { email: "creative@cportal.com" },
+    update: {},
+    create: {
+      email: "creative@cportal.com",
+      name: "Creative Director",
+      password: hashedPassword,
+      role: "creative_director",
+    },
+  });
+
+  console.log("Users created:", { agent, rep, manager, admin, creativeDirector });
 
   // Create sample bootcamp sessions
   const bootcamp1 = await prisma.bootcampSession.create({

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { hasCaisseAccess } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session || !hasCaisseAccess(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

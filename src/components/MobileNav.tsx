@@ -4,9 +4,23 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, Users, Calendar, UserPlus, LogOut, Gift, Menu, X, Target, TrendingUp } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import {
+  Home,
+  Users,
+  Calendar,
+  UserPlus,
+  LogOut,
+  Gift,
+  Menu,
+  X,
+  Target,
+  TrendingUp,
+  Palette,
+  UserCog,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signOut } from "next-auth/react";
+import { canManageCollaborators, hasCaisseAccess, hasContentCreationAccess } from "@/lib/access";
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
@@ -15,15 +29,25 @@ const navItems = [
   { href: "/dashboard/enrollments", icon: UserPlus, label: "Enroll" },
 ];
 
-const moreNavItems = [
-  { href: "/dashboard/promotions", icon: Gift, label: "Promotions" },
-  { href: "/dashboard/leads", icon: Target, label: "Leads" },
-  { href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" },
-];
-
 export function MobileNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const role = session?.user?.role;
+
+  const moreNavItems = [
+    { href: "/dashboard/promotions", icon: Gift, label: "Promotions" },
+    { href: "/dashboard/leads", icon: Target, label: "Leads" },
+    ...(hasContentCreationAccess(role)
+      ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Creation" }]
+      : []),
+    ...(hasCaisseAccess(role)
+      ? [{ href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" }]
+      : []),
+    ...(canManageCollaborators(role)
+      ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Collaborators" }]
+      : []),
+  ];
 
   const isMoreActive = moreNavItems.some((item) => pathname === item.href);
 

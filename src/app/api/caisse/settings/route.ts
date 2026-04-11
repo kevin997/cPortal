@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { hasCaisseAccess } from "@/lib/access";
 
 const DEFAULT_SETTINGS = {
   annualTarget: 50_000_000,
@@ -12,7 +13,7 @@ const DEFAULT_SETTINGS = {
 export async function GET() {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session || !hasCaisseAccess(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -40,7 +41,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session || !hasCaisseAccess(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

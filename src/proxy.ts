@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { canManageCollaborators, hasCaisseAccess } from "@/lib/access";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,6 +15,17 @@ export async function proxy(request: NextRequest) {
 
     if (session.user.role !== "referrer" && !session.user.twoFactorVerified) {
       return NextResponse.redirect(new URL("/verify-2fa", request.url));
+    }
+
+    if (pathname.startsWith("/dashboard/caisse") && !hasCaisseAccess(session.user.role)) {
+      return NextResponse.redirect(new URL("/dashboard/creation-contenu", request.url));
+    }
+
+    if (
+      pathname.startsWith("/dashboard/collaborators") &&
+      !canManageCollaborators(session.user.role)
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/creation-contenu", request.url));
     }
 
     return NextResponse.next();

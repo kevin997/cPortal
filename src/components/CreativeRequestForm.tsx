@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CreativeAssetPicker } from "@/components/CreativeAssetPicker";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,10 +104,12 @@ export function CreativeRequestForm({
 }: CreativeRequestFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm);
+  const [files, setFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (open) {
       setFormData(initialForm());
+      setFiles([]);
     }
   }, [open]);
 
@@ -135,9 +138,29 @@ export function CreativeRequestForm({
         throw new Error(error.error || "Failed to create request");
       }
 
+      const createdRequest = await response.json();
+
+      if (files.length > 0) {
+        const assetFormData = new FormData();
+        files.forEach((file) => assetFormData.append("files", file));
+
+        const uploadResponse = await fetch(`/api/content/requests/${createdRequest.id}/assets`, {
+          method: "POST",
+          body: assetFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.json();
+          throw new Error(uploadError.error || "Request created but asset upload failed");
+        }
+      }
+
       toast({
         title: "Demande enregistree",
-        description: `La fiche ${formData.reference} a ete ajoutee.`,
+        description:
+          files.length > 0
+            ? `La fiche ${formData.reference} et ses fichiers ont ete ajoutes.`
+            : `La fiche ${formData.reference} a ete ajoutee.`,
         variant: "success",
       });
       onSuccess();
@@ -345,6 +368,7 @@ export function CreativeRequestForm({
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Ressources et delais
               </h3>
+              <CreativeAssetPicker files={files} onChange={setFiles} disabled={loading} />
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="visualReferences">References visuelles</Label>

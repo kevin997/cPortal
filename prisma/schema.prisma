@@ -41,6 +41,7 @@ model User {
   assignedCreativeRequests CreativeRequest[]     @relation("CreativeRequestAssignee")
   createdCreativeDeliverables CreativeDeliverable[] @relation("CreativeDeliverableCreator")
   ownedCreativeDeliverables   CreativeDeliverable[] @relation("CreativeDeliverableOwner")
+  uploadedCreativeAssets      CreativeAsset[]        @relation("CreativeAssetUploader")
 
   @@map("users")
 }
@@ -257,6 +258,7 @@ model CreativeRequest {
   createdBy   User                  @relation("CreativeRequestCreator", fields: [createdById], references: [id], onDelete: Cascade)
   assignedTo  User?                 @relation("CreativeRequestAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   deliverables CreativeDeliverable[]
+  assets      CreativeAsset[]
 
   @@index([publicationDate])
   @@index([workflowStatus])
@@ -286,4 +288,25 @@ model CreativeDeliverable {
   @@index([status])
   @@index([ownerId])
   @@map("creative_deliverables")
+}
+
+model CreativeAsset {
+  id               String   @id @default(cuid())
+  requestId        String
+  publicId         String   @unique
+  secureUrl        String
+  originalFilename String
+  resourceType     String
+  format           String?
+  bytes            Int
+  mimeType         String?
+  uploadedById     String
+  createdAt        DateTime @default(now())
+
+  request     CreativeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedBy  User            @relation("CreativeAssetUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([resourceType])
+  @@map("creative_assets")
 }

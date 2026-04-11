@@ -104,6 +104,9 @@ export async function PUT(
           },
           orderBy: [{ scheduledFor: "asc" }],
         },
+        assets: {
+          orderBy: [{ createdAt: "desc" }],
+        },
       },
     });
 

@@ -7,14 +7,17 @@ import {
   CalendarClock,
   FileText,
   Lightbulb,
+  Paperclip,
   PlusCircle,
   RefreshCw,
   Send,
   Sparkles,
   X,
 } from "lucide-react";
+import { CreativeAssetGallery, type CreativeAssetItem } from "@/components/CreativeAssetGallery";
 import { CreativeDeliverableForm } from "@/components/CreativeDeliverableForm";
 import { CreativeRequestForm } from "@/components/CreativeRequestForm";
+import { RequestAssetUploadDialog } from "@/components/RequestAssetUploadDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +80,7 @@ interface CreativeRequest {
     role: string;
   } | null;
   deliverables: Deliverable[];
+  assets: CreativeAssetItem[];
 }
 
 function formatDate(value: string | null) {
@@ -110,6 +114,11 @@ export default function CreationContenuPage() {
   const [activeTab, setActiveTab] = useState("requests");
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
+  const [uploadDialogRequest, setUploadDialogRequest] = useState<{
+    id: string;
+    reference: string;
+  } | null>(null);
+  const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -255,6 +264,34 @@ export default function CreationContenuPage() {
       });
     } finally {
       setSendingReport(false);
+    }
+  };
+
+  const handleDeleteAsset = async (assetId: string) => {
+    setDeletingAssetId(assetId);
+    try {
+      const response = await fetch(`/api/content/assets/${assetId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete asset");
+      }
+
+      await fetchData();
+      toast({
+        title: "Fichier supprime",
+        variant: "success",
+      });
+    } catch (error: unknown) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible de supprimer le fichier",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAssetId(null);
     }
   };
 
@@ -512,6 +549,34 @@ export default function CreationContenuPage() {
                   )}
 
                   <div className="space-y-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-medium">Fichiers de contexte</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setUploadDialogRequest({
+                            id: request.id,
+                            reference: request.reference,
+                          })
+                        }
+                      >
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        Ajouter des fichiers
+                      </Button>
+                    </div>
+                    <CreativeAssetGallery
+                      assets={request.assets}
+                      onDelete={handleDeleteAsset}
+                      deletingId={deletingAssetId}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                       <p className="text-sm font-medium">Creatifs lies</p>
@@ -643,6 +708,18 @@ export default function CreationContenuPage() {
         onSuccess={fetchData}
       />
 
+      <RequestAssetUploadDialog
+        open={!!uploadDialogRequest}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUploadDialogRequest(null);
+          }
+        }}
+        requestId={uploadDialogRequest?.id || null}
+        requestReference={uploadDialogRequest?.reference || null}
+        onSuccess={fetchData}
+      />
+
       <Dialog open={guideOpen} onOpenChange={handleGuideOpenChange}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
           <DialogHeader>
@@ -682,7 +759,7 @@ export default function CreationContenuPage() {
                 <AccordionTrigger>1. Comment commencer</AccordionTrigger>
                 <AccordionContent className="space-y-2 text-muted-foreground">
                   <p>Utilisez le bouton `Nouvelle fiche` pour enregistrer la demande creative.</p>
-                  <p>Renseignez au minimum la reference, le demandeur, le type de contenu, les delais et le responsable assigne.</p>
+                  <p>Renseignez au minimum la reference, le demandeur, le type de contenu, les delais, le responsable assigne et joignez les fichiers utiles.</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">

@@ -30,6 +30,9 @@ export async function GET() {
           },
           orderBy: [{ scheduledFor: "asc" }],
         },
+        assets: {
+          orderBy: [{ createdAt: "desc" }],
+        },
       },
       orderBy: [{ publicationDate: "asc" }, { createdAt: "desc" }],
     });
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, name: true, role: true },
         },
         deliverables: true,
+        assets: true,
       },
     });
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "@/hooks/use-toast";
@@ -84,75 +85,79 @@ export function SocialMediaPlanForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-4xl">
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Nouveau plan social media</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="px-6 pt-6">Nouveau plan social media</DialogTitle>
+          <DialogDescription className="px-6">
             Preparez le texte et l&apos;ad copy qui pourront etre reutilises lors des demandes creatives.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="sm-title">Titre</Label>
-              <Input id="sm-title" value={formData.title} onChange={(event) => setField("title", event.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sm-client">Client</Label>
-              <Input id="sm-client" value={formData.clientName} onChange={(event) => setField("clientName", event.target.value)} placeholder="Ex. CSL Brands, KURSA..." />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sm-platform">Plateforme</Label>
-              <Input id="sm-platform" value={formData.platform} onChange={(event) => setField("platform", event.target.value)} placeholder="Instagram, LinkedIn..." />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="sm-campaign">Campagne</Label>
-              <Input id="sm-campaign" value={formData.campaignName} onChange={(event) => setField("campaignName", event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sm-date">Date de publication</Label>
-              <Input id="sm-date" type="datetime-local" value={formData.scheduledFor} onChange={(event) => setField("scheduledFor", event.target.value)} required />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="sm-status">Statut</Label>
-              <Select value={formData.status} onValueChange={(value) => setField("status", value)}>
-                <SelectTrigger id="sm-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOCIAL_MEDIA_PLAN_STATUSES.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="flex max-h-[calc(100vh-8rem)] flex-col">
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-4 pb-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="sm-title">Titre</Label>
+                  <Input id="sm-title" value={formData.title} onChange={(event) => setField("title", event.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sm-client">Client</Label>
+                  <Input id="sm-client" value={formData.clientName} onChange={(event) => setField("clientName", event.target.value)} placeholder="Ex. CSL Brands, KURSA..." />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sm-platform">Plateforme</Label>
+                  <Input id="sm-platform" value={formData.platform} onChange={(event) => setField("platform", event.target.value)} placeholder="Instagram, LinkedIn..." />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="sm-campaign">Campagne</Label>
+                  <Input id="sm-campaign" value={formData.campaignName} onChange={(event) => setField("campaignName", event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sm-date">Date de publication</Label>
+                  <Input id="sm-date" type="datetime-local" value={formData.scheduledFor} onChange={(event) => setField("scheduledFor", event.target.value)} required />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="sm-status">Statut</Label>
+                  <Select value={formData.status} onValueChange={(value) => setField("status", value)}>
+                    <SelectTrigger id="sm-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOCIAL_MEDIA_PLAN_STATUSES.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <RichTextEditor
-            label="Texte d'accompagnement"
-            value={formData.captionHtml}
-            onChange={(value) => setField("captionHtml", value)}
-            placeholder="Legende, hashtags, CTA..."
-          />
+              <RichTextEditor
+                label="Texte d'accompagnement"
+                value={formData.captionHtml}
+                onChange={(value) => setField("captionHtml", value)}
+                placeholder="Legende, hashtags, CTA..."
+              />
 
-          <RichTextEditor
-            label="Ad copy"
-            value={formData.adCopyHtml}
-            onChange={(value) => setField("adCopyHtml", value)}
-            placeholder="Copy publicitaire a utiliser pour les creatives ou ads..."
-          />
+              <RichTextEditor
+                label="Ad copy"
+                value={formData.adCopyHtml}
+                onChange={(value) => setField("adCopyHtml", value)}
+                placeholder="Copy publicitaire a utiliser pour les creatives ou ads..."
+              />
 
-          <RichTextEditor
-            label="Brief contextuel"
-            value={formData.briefHtml}
-            onChange={(value) => setField("briefHtml", value)}
-            placeholder="Notes pour aider la creation visuelle..."
-          />
+              <RichTextEditor
+                label="Brief contextuel"
+                value={formData.briefHtml}
+                onChange={(value) => setField("briefHtml", value)}
+                placeholder="Notes pour aider la creation visuelle..."
+              />
+            </div>
+          </ScrollArea>
 
-          <DialogFooter>
+          <DialogFooter className="border-t px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Annuler
             </Button>

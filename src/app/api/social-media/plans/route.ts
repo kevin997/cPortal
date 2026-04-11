@@ -54,7 +54,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, platform, campaignName, scheduledFor, status, captionHtml, adCopyHtml, briefHtml } = body;
+    const {
+      title,
+      clientName,
+      platform,
+      campaignName,
+      scheduledFor,
+      status,
+      captionHtml,
+      adCopyHtml,
+      briefHtml,
+    } = body;
 
     if (!title?.trim() || !scheduledFor) {
       return NextResponse.json(
@@ -66,6 +76,7 @@ export async function POST(request: NextRequest) {
     const plan = await prisma.socialMediaPlan.create({
       data: {
         title: title.trim(),
+        clientName: clientName?.trim() || null,
         platform: platform?.trim() || null,
         campaignName: campaignName?.trim() || null,
         scheduledFor: new Date(scheduledFor),

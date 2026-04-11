@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CreativeAssetPicker } from "@/components/CreativeAssetPicker";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +29,7 @@ import {
 } from "@/lib/content";
 import { canSelectSocialMediaPlansForRequests } from "@/lib/access";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 interface CollaboratorOption {
   id: string;
@@ -37,6 +48,7 @@ interface CreativeRequestFormProps {
 interface SocialMediaPlanOption {
   id: string;
   title: string;
+  clientName: string | null;
   platform: string | null;
   scheduledFor: string;
   captionHtml: string | null;
@@ -120,16 +132,34 @@ export function CreativeRequestForm({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [files, setFiles] = useState<File[]>([]);
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       setFormData(initialForm());
       setFiles([]);
+      setPlanPickerOpen(false);
     }
   }, [open]);
 
   const setField = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "clientName") {
+        const normalizedClient = typeof value === "string" ? value.trim().toLowerCase() : "";
+        const currentSelectedPlan = socialMediaPlans.find(
+          (plan) => plan.id === prev.socialMediaPlanId
+        );
+        if (
+          currentSelectedPlan &&
+          normalizedClient &&
+          (currentSelectedPlan.clientName || "").trim().toLowerCase() !== normalizedClient
+        ) {
+          next.socialMediaPlanId = "none";
+        }
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -209,6 +239,19 @@ export function CreativeRequestForm({
       ? socialMediaPlans.find((plan) => plan.id === formData.socialMediaPlanId)
       : null;
   const canSelectPlan = canSelectSocialMediaPlansForRequests(session?.user?.role);
+  const normalizedClientName = formData.clientName.trim().toLowerCase();
+  const filteredPlans = useMemo(() => {
+    if (!normalizedClientName) {
+      return [];
+    }
+
+    return socialMediaPlans.filter(
+      (plan) => (plan.clientName || "").trim().toLowerCase() === normalizedClientName
+    );
+  }, [normalizedClientName, socialMediaPlans]);
+  const selectedPlanLabel = selectedPlan
+    ? `${selectedPlan.title} - ${new Date(selectedPlan.scheduledFor).toLocaleDateString("fr-FR")}`
+    : "Rechercher un contenu planifie";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -278,19 +321,95 @@ export function CreativeRequestForm({
                 {canSelectPlan && (
                   <div className="space-y-2 xl:col-span-3">
                     <Label htmlFor="socialMediaPlanId">Texte social media a utiliser</Label>
-                    <Select value={formData.socialMediaPlanId} onValueChange={(value) => setField("socialMediaPlanId", value)}>
-                      <SelectTrigger id="socialMediaPlanId">
-                        <SelectValue placeholder="Choisir un plan social media" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Aucun texte selectionne</SelectItem>
-                        {socialMediaPlans.map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id}>
-                            {plan.title} - {new Date(plan.scheduledFor).toLocaleDateString("fr-FR")} {plan.platform ? `- ${plan.platform}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={planPickerOpen}
+                          className="w-full justify-between"
+                          disabled={!normalizedClientName}
+                        >
+                          <span className="truncate">
+                            {!normalizedClientName
+                              ? "Selectionnez d'abord le client"
+                              : selectedPlanLabel}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Rechercher par date, titre, texte..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              {normalizedClientName
+                                ? "Aucun contenu trouve pour ce client."
+                                : "Selectionnez un client pour charger les contenus."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="Aucun texte selectionne"
+                                onSelect={() => {
+                                  setField("socialMediaPlanId", "none");
+                                  setPlanPickerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.socialMediaPlanId === "none" ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                Aucun texte selectionne
+                              </CommandItem>
+                              {filteredPlans.map((plan) => {
+                                const searchValue = [
+                                  plan.title,
+                                  plan.clientName || "",
+                                  plan.platform || "",
+                                  new Date(plan.scheduledFor).toLocaleDateString("fr-FR"),
+                                  plan.captionHtml || "",
+                                  plan.adCopyHtml || "",
+                                ].join(" ");
+
+                                return (
+                                  <CommandItem
+                                    key={plan.id}
+                                    value={searchValue}
+                                    onSelect={() => {
+                                      setField("socialMediaPlanId", plan.id);
+                                      setPlanPickerOpen(false);
+                                    }}
+                                    className="items-start"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 mt-0.5 h-4 w-4 shrink-0",
+                                        formData.socialMediaPlanId === plan.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="truncate font-medium">{plan.title}</p>
+                                      <p className="truncate text-xs text-muted-foreground">
+                                        {new Date(plan.scheduledFor).toLocaleDateString("fr-FR")}
+                                        {plan.platform ? ` • ${plan.platform}` : ""}
+                                      </p>
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {normalizedClientName && filteredPlans.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Aucun contenu social media n&apos;est encore planifie pour ce client.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

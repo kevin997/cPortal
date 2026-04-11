@@ -321,6 +321,7 @@ model CreativeAsset {
 model SocialMediaPlan {
   id             String   @id @default(cuid())
   title          String
+  clientName     String?
   platform       String?
   campaignName   String?
   scheduledFor   DateTime
@@ -337,5 +338,6 @@ model SocialMediaPlan {
 
   @@index([scheduledFor])
   @@index([status])
+  @@index([clientName])
   @@map("social_media_plans")
 }

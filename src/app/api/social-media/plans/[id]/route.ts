@@ -25,6 +25,7 @@ export async function PUT(
       where: { id },
       data: {
         title: body.title?.trim() || existing.title,
+        clientName: body.clientName === undefined ? undefined : body.clientName?.trim() || null,
         platform: body.platform === undefined ? undefined : body.platform?.trim() || null,
         campaignName: body.campaignName === undefined ? undefined : body.campaignName?.trim() || null,
         scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : undefined,

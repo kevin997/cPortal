@@ -19,6 +19,7 @@ interface SocialMediaPlanFormProps {
 
 const initialForm = (defaultDate?: string) => ({
   title: "",
+  clientName: "",
   platform: "",
   campaignName: "",
   scheduledFor: defaultDate ? `${defaultDate}T10:00` : "",
@@ -98,10 +99,14 @@ export function SocialMediaPlanForm({
               <Input id="sm-title" value={formData.title} onChange={(event) => setField("title", event.target.value)} required />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="sm-client">Client</Label>
+              <Input id="sm-client" value={formData.clientName} onChange={(event) => setField("clientName", event.target.value)} placeholder="Ex. CSL Brands, KURSA..." />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="sm-platform">Plateforme</Label>
               <Input id="sm-platform" value={formData.platform} onChange={(event) => setField("platform", event.target.value)} placeholder="Instagram, LinkedIn..." />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="sm-campaign">Campagne</Label>
               <Input id="sm-campaign" value={formData.campaignName} onChange={(event) => setField("campaignName", event.target.value)} />
             </div>

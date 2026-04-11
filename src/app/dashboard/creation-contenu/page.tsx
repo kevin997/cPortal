@@ -91,6 +91,7 @@ interface CreativeRequest {
 interface SocialMediaPlan {
   id: string;
   title: string;
+  clientName: string | null;
   platform: string | null;
   scheduledFor: string;
   captionHtml: string | null;

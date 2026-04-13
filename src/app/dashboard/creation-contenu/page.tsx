@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   BookOpen,
   CalendarClock,
+  Eye,
   FileText,
   Lightbulb,
+  Pencil,
   Paperclip,
   PlusCircle,
   RefreshCw,
@@ -16,8 +19,14 @@ import {
   Megaphone,
 } from "lucide-react";
 import { CreativeAssetGallery, type CreativeAssetItem } from "@/components/CreativeAssetGallery";
-import { CreativeDeliverableForm } from "@/components/CreativeDeliverableForm";
-import { CreativeRequestForm } from "@/components/CreativeRequestForm";
+import {
+  CreativeDeliverableForm,
+  type CreativeDeliverableEditData,
+} from "@/components/CreativeDeliverableForm";
+import {
+  CreativeRequestForm,
+  type CreativeRequestEditData,
+} from "@/components/CreativeRequestForm";
 import { RequestAssetUploadDialog } from "@/components/RequestAssetUploadDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -52,6 +61,12 @@ interface Deliverable {
   scheduledFor: string;
   status: string;
   notes: string | null;
+  socialMediaPlanTitle: string | null;
+  socialMediaCaptionHtml: string | null;
+  socialMediaAdCopyHtml: string | null;
+  socialMediaPlan: {
+    id: string;
+  } | null;
   owner: {
     id: string;
     name: string;
@@ -81,11 +96,45 @@ interface CreativeRequest {
     name: string;
     role: string;
   } | null;
+  requestDate: string | null;
+  servicePole: string | null;
+  accountManager: string | null;
+  clientApproverContact: string | null;
+  callToAction: string | null;
+  copyProvided: boolean;
+  copywriterName: string | null;
+  desiredFormat: string | null;
+  quantity: number | null;
+  language: string | null;
+  includeLogo: boolean;
+  brandGuidelinesProvided: boolean;
+  priceToDisplay: string | null;
+  dateToDisplay: string | null;
+  timeToDisplay: string | null;
+  locationToDisplay: string | null;
+  contactNumber: string | null;
+  linkUrl: string | null;
+  hashtags: string | null;
+  legalMentions: string | null;
+  partnersSponsors: string | null;
+  mandatoryElements: string | null;
+  photosAvailable: boolean;
+  videosAvailable: boolean;
+  logoAvailable: boolean;
+  sourceTextAvailable: boolean;
+  visualReferences: string | null;
+  referenceLinks: string | null;
+  assetLocation: string | null;
+  validationRequired: string;
+  feedbackRounds: number | null;
+  requesterValidation: string | null;
+  marketingValidation: string | null;
+  clientValidation: string | null;
+  finalValidation: string | null;
+  additionalNotes: string | null;
+  workflowDate: string | null;
   deliverables: Deliverable[];
   assets: CreativeAssetItem[];
-  socialMediaPlanTitle: string | null;
-  socialMediaCaptionHtml: string | null;
-  socialMediaAdCopyHtml: string | null;
 }
 
 interface SocialMediaPlan {
@@ -135,6 +184,8 @@ export default function CreationContenuPage() {
     reference: string;
   } | null>(null);
   const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
+  const [editingRequest, setEditingRequest] = useState<CreativeRequestEditData | null>(null);
+  const [editingDeliverable, setEditingDeliverable] = useState<CreativeDeliverableEditData | null>(null);
 
   const fetchData = async () => {
     try {
@@ -332,12 +383,14 @@ export default function CreationContenuPage() {
 
   const startNewRequest = () => {
     setActiveTab("requests");
+    setEditingRequest(null);
     setRequestFormOpen(true);
     handleGuideOpenChange(false);
   };
 
   const startNewDeliverable = () => {
     setActiveTab("deliverables");
+    setEditingDeliverable(null);
     setDeliverableFormOpen(true);
     handleGuideOpenChange(false);
   };
@@ -345,6 +398,84 @@ export default function CreationContenuPage() {
   const hideGuidePanel = () => {
     setGuideVisible(false);
     markGuideAsSeen();
+  };
+
+  const openRequestEditor = (request: CreativeRequest) => {
+    setEditingRequest({
+      id: request.id,
+      reference: request.reference,
+      requestDate: request.requestDate,
+      requesterName: request.requesterName,
+      requesterFunction: request.requesterFunction,
+      servicePole: request.servicePole,
+      clientName: request.clientName,
+      accountManager: request.accountManager,
+      clientApproverContact: request.clientApproverContact,
+      contentType: request.contentType,
+      platform: request.platform,
+      objective: request.objective,
+      campaignName: request.campaignName,
+      mainMessage: request.mainMessage,
+      callToAction: request.callToAction,
+      copyProvided: request.copyProvided,
+      copywriterName: request.copywriterName,
+      desiredFormat: request.desiredFormat,
+      quantity: request.quantity,
+      language: request.language,
+      includeLogo: request.includeLogo,
+      brandGuidelinesProvided: request.brandGuidelinesProvided,
+      priceToDisplay: request.priceToDisplay,
+      dateToDisplay: request.dateToDisplay,
+      timeToDisplay: request.timeToDisplay,
+      locationToDisplay: request.locationToDisplay,
+      contactNumber: request.contactNumber,
+      linkUrl: request.linkUrl,
+      hashtags: request.hashtags,
+      legalMentions: request.legalMentions,
+      partnersSponsors: request.partnersSponsors,
+      mandatoryElements: request.mandatoryElements,
+      photosAvailable: request.photosAvailable,
+      videosAvailable: request.videosAvailable,
+      logoAvailable: request.logoAvailable,
+      sourceTextAvailable: request.sourceTextAvailable,
+      visualReferences: request.visualReferences,
+      referenceLinks: request.referenceLinks,
+      assetLocation: request.assetLocation,
+      creativeDueDate: request.creativeDueDate,
+      publicationDate: request.publicationDate,
+      publicationTime: request.publicationTime,
+      urgency: request.urgency,
+      validationRequired: request.validationRequired,
+      feedbackRounds: request.feedbackRounds,
+      requesterValidation: request.requesterValidation,
+      marketingValidation: request.marketingValidation,
+      clientValidation: request.clientValidation,
+      finalValidation: request.finalValidation,
+      additionalNotes: request.additionalNotes,
+      workflowStatus: request.workflowStatus,
+      workflowResponsible: request.workflowResponsible,
+      workflowDate: request.workflowDate,
+      assignedTo: request.assignedTo ? { id: request.assignedTo.id } : null,
+    });
+    setRequestFormOpen(true);
+  };
+
+  const openDeliverableEditor = (deliverable: Deliverable & { request: { id: string } }) => {
+    setEditingDeliverable({
+      id: deliverable.id,
+      request: {
+        id: deliverable.request.id,
+      },
+      title: deliverable.title,
+      platform: deliverable.platform,
+      format: deliverable.format,
+      scheduledFor: deliverable.scheduledFor,
+      status: deliverable.status,
+      notes: deliverable.notes,
+      socialMediaPlan: deliverable.socialMediaPlan ? { id: deliverable.socialMediaPlan.id } : null,
+      owner: deliverable.owner ? { id: deliverable.owner.id } : null,
+    });
+    setDeliverableFormOpen(true);
   };
 
   return (
@@ -365,11 +496,11 @@ export default function CreationContenuPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Actualiser
           </Button>
-          <Button variant="outline" onClick={() => setDeliverableFormOpen(true)}>
+          <Button variant="outline" onClick={startNewDeliverable}>
             <Sparkles className="mr-2 h-4 w-4" />
             Ajouter un creatif
           </Button>
-          <Button onClick={() => setRequestFormOpen(true)}>
+          <Button onClick={startNewRequest}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Nouvelle fiche
           </Button>
@@ -508,6 +639,18 @@ export default function CreationContenuPage() {
                       </p>
                     </div>
                     <div className="grid gap-2 sm:min-w-[240px]">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/dashboard/creation-contenu/fiches/${request.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Voir fiche
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => openRequestEditor(request)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Modifier
+                        </Button>
+                      </div>
                       <Select
                         value={request.workflowStatus}
                         onValueChange={(value) => handleRequestStatusChange(request.id, value)}
@@ -567,38 +710,6 @@ export default function CreationContenuPage() {
                     </div>
                   )}
 
-                  {(request.socialMediaPlanTitle || request.socialMediaCaptionHtml || request.socialMediaAdCopyHtml) && (
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <div className="flex items-center gap-2">
-                        <Megaphone className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm font-medium">
-                          Texte social media selectionne
-                          {request.socialMediaPlanTitle ? `: ${request.socialMediaPlanTitle}` : ""}
-                        </p>
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-md bg-muted/40 p-3">
-                          <p className="mb-2 text-xs uppercase text-muted-foreground">Caption</p>
-                          <div
-                            className="prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{
-                              __html: request.socialMediaCaptionHtml || "<p>Aucun texte selectionne.</p>",
-                            }}
-                          />
-                        </div>
-                        <div className="rounded-md bg-muted/40 p-3">
-                          <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy</p>
-                          <div
-                            className="prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{
-                              __html: request.socialMediaAdCopyHtml || "<p>Aucun ad copy selectionne.</p>",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
@@ -636,42 +747,94 @@ export default function CreationContenuPage() {
                       <p className="text-sm text-muted-foreground">Aucun creatif planifie pour cette fiche.</p>
                     ) : (
                       request.deliverables.map((deliverable) => (
-                        <div
-                          key={deliverable.id}
-                          className="flex flex-col gap-3 rounded-lg border p-4 xl:flex-row xl:items-center xl:justify-between"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-medium">{deliverable.title}</p>
-                              <Badge variant="outline">{deliverable.platform || "Canal libre"}</Badge>
-                              <Badge variant="secondary">
-                                {deliverable.format || "Format libre"}
-                              </Badge>
+                        <div key={deliverable.id} className="space-y-3 rounded-lg border p-4">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium">{deliverable.title}</p>
+                                <Badge variant="outline">{deliverable.platform || "Canal libre"}</Badge>
+                                <Badge variant="secondary">
+                                  {deliverable.format || "Format libre"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDate(deliverable.scheduledFor)} • {deliverable.owner?.name || "Non assigne"}
+                              </p>
+                              {deliverable.socialMediaPlanTitle && (
+                                <p className="text-xs text-muted-foreground">
+                                  Contenu social media: {deliverable.socialMediaPlanTitle}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {formatDate(deliverable.scheduledFor)} • {deliverable.owner?.name || "Non assigne"}
-                            </p>
+                            <div className="grid gap-2 sm:min-w-[220px]">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button asChild size="sm" variant="outline">
+                                  <Link href={`/dashboard/creation-contenu/creatifs/${deliverable.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Voir creatif
+                                  </Link>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    openDeliverableEditor({
+                                      ...deliverable,
+                                      request: {
+                                        id: request.id,
+                                      },
+                                    })
+                                  }
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Modifier
+                                </Button>
+                              </div>
+                              <Select
+                                value={deliverable.status}
+                                onValueChange={(value) => handleDeliverableStatusChange(deliverable.id, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CREATIVE_DELIVERABLE_STATUSES.map((status) => (
+                                    <SelectItem key={status.value} value={status.value}>
+                                      {status.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground">
+                                {getCreativeDeliverableStatusLabel(deliverable.status)}
+                              </p>
+                            </div>
                           </div>
-                          <div className="grid gap-2 sm:min-w-[220px]">
-                            <Select
-                              value={deliverable.status}
-                              onValueChange={(value) => handleDeliverableStatusChange(deliverable.id, value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {CREATIVE_DELIVERABLE_STATUSES.map((status) => (
-                                  <SelectItem key={status.value} value={status.value}>
-                                    {status.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {getCreativeDeliverableStatusLabel(deliverable.status)}
-                            </p>
-                          </div>
+                          {(deliverable.socialMediaCaptionHtml || deliverable.socialMediaAdCopyHtml) && (
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="rounded-md bg-muted/40 p-3">
+                                <div className="mb-2 flex items-center gap-2">
+                                  <Megaphone className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-xs uppercase text-muted-foreground">Caption</p>
+                                </div>
+                                <div
+                                  className="prose prose-sm max-w-none"
+                                  dangerouslySetInnerHTML={{
+                                    __html: deliverable.socialMediaCaptionHtml || "<p>Aucun texte selectionne.</p>",
+                                  }}
+                                />
+                              </div>
+                              <div className="rounded-md bg-muted/40 p-3">
+                                <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy</p>
+                                <div
+                                  className="prose prose-sm max-w-none"
+                                  dangerouslySetInnerHTML={{
+                                    __html: deliverable.socialMediaAdCopyHtml || "<p>Aucun ad copy selectionne.</p>",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -716,6 +879,18 @@ export default function CreationContenuPage() {
                       <CalendarClock className="h-4 w-4" />
                       {deliverable.platform || "Sans canal"} • {deliverable.format || "Sans format"}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/dashboard/creation-contenu/creatifs/${deliverable.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Voir creatif
+                        </Link>
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => openDeliverableEditor(deliverable)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Modifier
+                      </Button>
+                    </div>
                     <Select
                       value={deliverable.status}
                       onValueChange={(value) => handleDeliverableStatusChange(deliverable.id, value)}
@@ -741,19 +916,25 @@ export default function CreationContenuPage() {
 
       <CreativeRequestForm
         open={requestFormOpen}
-        onOpenChange={setRequestFormOpen}
+        onOpenChange={(open) => {
+          setRequestFormOpen(open);
+          if (!open) {
+            setEditingRequest(null);
+          }
+        }}
         collaborators={collaborators}
-        socialMediaPlans={
-          canSelectSocialMediaPlansForRequests(session?.user?.role)
-            ? socialMediaPlans
-            : []
-        }
+        editData={editingRequest}
         onSuccess={fetchData}
       />
 
       <CreativeDeliverableForm
         open={deliverableFormOpen}
-        onOpenChange={setDeliverableFormOpen}
+        onOpenChange={(open) => {
+          setDeliverableFormOpen(open);
+          if (!open) {
+            setEditingDeliverable(null);
+          }
+        }}
         requests={requests.map((request) => ({
           id: request.id,
           reference: request.reference,
@@ -761,6 +942,12 @@ export default function CreationContenuPage() {
           contentType: request.contentType,
         }))}
         collaborators={collaborators}
+        socialMediaPlans={
+          canSelectSocialMediaPlansForRequests(session?.user?.role)
+            ? socialMediaPlans
+            : []
+        }
+        editData={editingDeliverable}
         onSuccess={fetchData}
       />
 

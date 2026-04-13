@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
             publicationDate: true,
           },
         },
+        socialMediaPlan: {
+          select: {
+            id: true,
+            title: true,
+            clientName: true,
+            platform: true,
+            scheduledFor: true,
+          },
+        },
         owner: {
           select: { id: true, name: true, role: true },
         },
@@ -64,7 +73,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { requestId, title, platform, format, scheduledFor, status, notes, ownerId } = body as {
+    const {
+      requestId,
+      title,
+      platform,
+      format,
+      scheduledFor,
+      status,
+      notes,
+      ownerId,
+      socialMediaPlanId,
+    } = body as {
       requestId?: string;
       title?: string;
       platform?: string;
@@ -73,6 +92,7 @@ export async function POST(request: NextRequest) {
       status?: string;
       notes?: string;
       ownerId?: string;
+      socialMediaPlanId?: string | null;
     };
 
     if (!requestId || !title?.trim() || !scheduledFor) {
@@ -81,6 +101,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const selectedPlan = socialMediaPlanId
+      ? await prisma.socialMediaPlan.findUnique({
+          where: { id: socialMediaPlanId },
+        })
+      : null;
 
     const deliverable = await prisma.creativeDeliverable.create({
       data: {
@@ -91,6 +117,10 @@ export async function POST(request: NextRequest) {
         scheduledFor: new Date(scheduledFor),
         status: status || "planned",
         notes: notes?.trim() || null,
+        socialMediaPlanId: socialMediaPlanId || null,
+        socialMediaPlanTitle: selectedPlan?.title || null,
+        socialMediaCaptionHtml: selectedPlan?.captionHtml || null,
+        socialMediaAdCopyHtml: selectedPlan?.adCopyHtml || null,
         ownerId: ownerId || session.user.id,
         createdById: session.user.id,
       },
@@ -102,6 +132,15 @@ export async function POST(request: NextRequest) {
             clientName: true,
             contentType: true,
             publicationDate: true,
+          },
+        },
+        socialMediaPlan: {
+          select: {
+            id: true,
+            title: true,
+            clientName: true,
+            platform: true,
+            scheduledFor: true,
           },
         },
         owner: {

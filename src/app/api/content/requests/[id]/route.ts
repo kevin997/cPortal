@@ -7,6 +7,63 @@ function parseOptionalDate(value?: string | null) {
   return value ? new Date(value) : null;
 }
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session || !hasContentCreationAccess(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const creativeRequest = await prisma.creativeRequest.findUnique({
+      where: { id },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, role: true },
+        },
+        assignedTo: {
+          select: { id: true, name: true, role: true },
+        },
+        deliverables: {
+          include: {
+            owner: {
+              select: { id: true, name: true, role: true },
+            },
+            socialMediaPlan: {
+              select: {
+                id: true,
+                title: true,
+                clientName: true,
+                platform: true,
+                scheduledFor: true,
+              },
+            },
+          },
+          orderBy: [{ scheduledFor: "asc" }],
+        },
+        assets: {
+          orderBy: [{ createdAt: "desc" }],
+        },
+      },
+    });
+
+    if (!creativeRequest) {
+      return NextResponse.json({ error: "Creative request not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(creativeRequest);
+  } catch (error) {
+    console.error("Error fetching creative request:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch creative request" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,14 +81,6 @@ export async function PUT(
     if (!existing) {
       return NextResponse.json({ error: "Creative request not found" }, { status: 404 });
     }
-
-    const socialMediaPlanId =
-      body.socialMediaPlanId === undefined ? existing.socialMediaPlanId : body.socialMediaPlanId || null;
-    const selectedPlan = socialMediaPlanId
-      ? await prisma.socialMediaPlan.findUnique({
-          where: { id: socialMediaPlanId },
-        })
-      : null;
 
     const updated = await prisma.creativeRequest.update({
       where: { id },
@@ -96,10 +145,6 @@ export async function PUT(
         workflowDate:
           body.workflowDate === undefined ? undefined : parseOptionalDate(body.workflowDate),
         assignedToId: body.assignedToId === undefined ? undefined : body.assignedToId || null,
-        socialMediaPlanId,
-        socialMediaPlanTitle: selectedPlan?.title || null,
-        socialMediaCaptionHtml: selectedPlan?.captionHtml || null,
-        socialMediaAdCopyHtml: selectedPlan?.adCopyHtml || null,
       },
       include: {
         createdBy: {
@@ -113,13 +158,21 @@ export async function PUT(
             owner: {
               select: { id: true, name: true, role: true },
             },
+            socialMediaPlan: {
+              select: {
+                id: true,
+                title: true,
+                clientName: true,
+                platform: true,
+                scheduledFor: true,
+              },
+            },
           },
           orderBy: [{ scheduledFor: "asc" }],
         },
         assets: {
           orderBy: [{ createdAt: "desc" }],
         },
-        socialMediaPlan: true,
       },
     });
 

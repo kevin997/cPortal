@@ -8,9 +8,13 @@ import {
   ChevronRight,
   Filter,
   Megaphone,
+  Pencil,
   PlusCircle,
 } from "lucide-react";
-import { SocialMediaPlanForm } from "@/components/SocialMediaPlanForm";
+import {
+  SocialMediaPlanForm,
+  type SocialMediaPlanEditData,
+} from "@/components/SocialMediaPlanForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +99,7 @@ export default function SocialMediaCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [editingPlan, setEditingPlan] = useState<SocialMediaPlanEditData | null>(null);
 
   const monthKey = useMemo(() => formatMonthKey(currentMonth), [currentMonth]);
 
@@ -180,6 +185,27 @@ export default function SocialMediaCalendarPage() {
     setSelectedDate(today);
   };
 
+  const openCreatePlan = () => {
+    setEditingPlan(null);
+    setFormOpen(true);
+  };
+
+  const openEditPlan = (plan: SocialMediaPlan) => {
+    setEditingPlan({
+      id: plan.id,
+      title: plan.title,
+      clientName: plan.clientName,
+      platform: plan.platform,
+      campaignName: plan.campaignName,
+      scheduledFor: plan.scheduledFor,
+      status: plan.status,
+      captionHtml: plan.captionHtml,
+      adCopyHtml: plan.adCopyHtml,
+      briefHtml: plan.briefHtml,
+    });
+    setFormOpen(true);
+  };
+
   return (
     <div className="space-y-6 py-6">
       <div className="space-y-2">
@@ -233,7 +259,7 @@ export default function SocialMediaCalendarPage() {
             </div>
 
             {canEditSocialMediaPlans(session?.user?.role) && (
-              <Button onClick={() => setFormOpen(true)} className="rounded-xl">
+              <Button onClick={openCreatePlan} className="rounded-xl">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Nouveau plan
               </Button>
@@ -320,6 +346,21 @@ export default function SocialMediaCalendarPage() {
                                 {stripHtml(plan.adCopyHtml)}
                               </p>
                             )}
+                            {canEditSocialMediaPlans(session?.user?.role) && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="mt-2 h-7 px-2 text-[11px]"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openEditPlan(plan);
+                                }}
+                              >
+                                <Pencil className="mr-1 h-3 w-3" />
+                                Modifier
+                              </Button>
+                            )}
                           </div>
                         ))}
 
@@ -384,11 +425,19 @@ export default function SocialMediaCalendarPage() {
               ) : (
                 plansForSelectedDate.map((plan) => (
                   <div key={plan.id} className="space-y-3 rounded-2xl border border-border/60 bg-background p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">{plan.title}</p>
-                      <Badge variant="outline">{plan.clientName || "Sans client"}</Badge>
-                      <Badge variant="outline">{plan.platform || "Sans plateforme"}</Badge>
-                      <Badge variant="secondary">{getSocialMediaPlanStatusLabel(plan.status)}</Badge>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{plan.title}</p>
+                        <Badge variant="outline">{plan.clientName || "Sans client"}</Badge>
+                        <Badge variant="outline">{plan.platform || "Sans plateforme"}</Badge>
+                        <Badge variant="secondary">{getSocialMediaPlanStatusLabel(plan.status)}</Badge>
+                      </div>
+                      {canEditSocialMediaPlans(session?.user?.role) && (
+                        <Button size="sm" variant="outline" onClick={() => openEditPlan(plan)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Modifier
+                        </Button>
+                      )}
                     </div>
 
                     <p className="text-sm text-muted-foreground">
@@ -449,8 +498,14 @@ export default function SocialMediaCalendarPage() {
 
       <SocialMediaPlanForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) {
+            setEditingPlan(null);
+          }
+        }}
         defaultDate={selectedDate.toISOString().slice(0, 10)}
+        editData={editingPlan}
         onSuccess={fetchPlans}
       />
     </div>

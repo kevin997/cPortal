@@ -27,6 +27,15 @@ export async function GET() {
             owner: {
               select: { id: true, name: true, role: true },
             },
+            socialMediaPlan: {
+              select: {
+                id: true,
+                title: true,
+                clientName: true,
+                platform: true,
+                scheduledFor: true,
+              },
+            },
           },
           orderBy: [{ scheduledFor: "asc" }],
         },
@@ -59,7 +68,6 @@ export async function POST(request: NextRequest) {
     const reference = body.reference?.trim();
     const requesterName = body.requesterName?.trim();
     const contentType = body.contentType?.trim();
-    const socialMediaPlanId = body.socialMediaPlanId || null;
 
     if (!reference || !requesterName || !contentType) {
       return NextResponse.json(
@@ -67,12 +75,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const selectedPlan = socialMediaPlanId
-      ? await prisma.socialMediaPlan.findUnique({
-          where: { id: socialMediaPlanId },
-        })
-      : null;
 
     const created = await prisma.creativeRequest.create({
       data: {
@@ -129,10 +131,6 @@ export async function POST(request: NextRequest) {
         workflowResponsible: body.workflowResponsible?.trim() || null,
         workflowDate: parseOptionalDate(body.workflowDate),
         assignedToId: body.assignedToId || null,
-        socialMediaPlanId,
-        socialMediaPlanTitle: selectedPlan?.title || null,
-        socialMediaCaptionHtml: selectedPlan?.captionHtml || null,
-        socialMediaAdCopyHtml: selectedPlan?.adCopyHtml || null,
         createdById: session.user.id,
       },
       include: {
@@ -142,9 +140,23 @@ export async function POST(request: NextRequest) {
         assignedTo: {
           select: { id: true, name: true, role: true },
         },
-        deliverables: true,
+        deliverables: {
+          include: {
+            owner: {
+              select: { id: true, name: true, role: true },
+            },
+            socialMediaPlan: {
+              select: {
+                id: true,
+                title: true,
+                clientName: true,
+                platform: true,
+                scheduledFor: true,
+              },
+            },
+          },
+        },
         assets: true,
-        socialMediaPlan: true,
       },
     });
 

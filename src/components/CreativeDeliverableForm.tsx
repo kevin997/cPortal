@@ -1,14 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { canSelectSocialMediaPlansForRequests } from "@/lib/access";
 import { CREATIVE_DELIVERABLE_STATUSES, getCollaboratorRoleLabel } from "@/lib/content";
+import { cn } from "@/lib/utils";
 
 interface RequestOption {
   id: string;
@@ -23,16 +43,54 @@ interface CollaboratorOption {
   role: string;
 }
 
+interface SocialMediaPlanOption {
+  id: string;
+  title: string;
+  clientName: string | null;
+  platform: string | null;
+  scheduledFor: string;
+  captionHtml: string | null;
+  adCopyHtml: string | null;
+}
+
+export interface CreativeDeliverableEditData {
+  id: string;
+  request: {
+    id: string;
+  };
+  title: string;
+  platform: string | null;
+  format: string | null;
+  scheduledFor: string;
+  status: string;
+  notes: string | null;
+  socialMediaPlan: {
+    id: string;
+  } | null;
+  owner: {
+    id: string;
+  } | null;
+}
+
 interface CreativeDeliverableFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requests: RequestOption[];
   collaborators: CollaboratorOption[];
+  socialMediaPlans: SocialMediaPlanOption[];
   onSuccess: () => void;
+  editData?: CreativeDeliverableEditData | null;
 }
 
 function nextHour() {
   const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+}
+
+function datetimeLocalValue(value?: string | null) {
+  if (!value) return nextHour();
+  const date = new Date(value);
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
   return date.toISOString().slice(0, 16);
 }
@@ -46,53 +104,108 @@ const initialForm = {
   status: "planned",
   notes: "",
   ownerId: "self",
+  socialMediaPlanId: "none",
 };
+
+function formFromEditData(editData: CreativeDeliverableEditData) {
+  return {
+    requestId: editData.request.id,
+    title: editData.title,
+    platform: editData.platform || "",
+    format: editData.format || "",
+    scheduledFor: datetimeLocalValue(editData.scheduledFor),
+    status: editData.status,
+    notes: editData.notes || "",
+    ownerId: editData.owner?.id || "self",
+    socialMediaPlanId: editData.socialMediaPlan?.id || "none",
+  };
+}
 
 export function CreativeDeliverableForm({
   open,
   onOpenChange,
   requests,
   collaborators,
+  socialMediaPlans,
   onSuccess,
+  editData,
 }: CreativeDeliverableFormProps) {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
   const [formData, setFormData] = useState(initialForm);
+  const isEditing = !!editData;
 
   useEffect(() => {
     if (open) {
-      setFormData({
-        ...initialForm,
-        requestId: requests[0]?.id || "",
-      });
+      setFormData(
+        editData
+          ? formFromEditData(editData)
+          : {
+              ...initialForm,
+              requestId: requests[0]?.id || "",
+            }
+      );
+      setPlanPickerOpen(false);
     }
-  }, [open, requests]);
+  }, [open, requests, editData]);
 
   const setField = (field: keyof typeof initialForm, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "requestId") {
+        next.socialMediaPlanId = "none";
+      }
+      return next;
+    });
   };
+
+  const selectedRequest = requests.find((request) => request.id === formData.requestId) || null;
+  const normalizedClientName = (selectedRequest?.clientName || "").trim().toLowerCase();
+  const canSelectPlan = canSelectSocialMediaPlansForRequests(session?.user?.role);
+  const filteredPlans = useMemo(() => {
+    if (!normalizedClientName) {
+      return [];
+    }
+
+    return socialMediaPlans.filter(
+      (plan) => (plan.clientName || "").trim().toLowerCase() === normalizedClientName
+    );
+  }, [normalizedClientName, socialMediaPlans]);
+  const selectedPlan =
+    formData.socialMediaPlanId !== "none"
+      ? filteredPlans.find((plan) => plan.id === formData.socialMediaPlanId) || null
+      : null;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch("/api/content/deliverables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          ownerId: formData.ownerId === "self" ? null : formData.ownerId,
-        }),
-      });
+      const response = await fetch(
+        isEditing ? `/api/content/deliverables/${editData.id}` : "/api/content/deliverables",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            ownerId: formData.ownerId === "self" ? null : formData.ownerId,
+            socialMediaPlanId:
+              formData.socialMediaPlanId === "none" ? null : formData.socialMediaPlanId,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create deliverable");
+        throw new Error(error.error || "Failed to save deliverable");
       }
 
       toast({
-        title: "Creatif planifie",
-        description: `${formData.title} a ete ajoute.`,
+        title: isEditing ? "Creatif mis a jour" : "Creatif planifie",
+        description: isEditing
+          ? `${formData.title} a ete mis a jour.`
+          : `${formData.title} a ete ajoute.`,
         variant: "success",
       });
       onSuccess();
@@ -108,11 +221,15 @@ export function CreativeDeliverableForm({
     }
   };
 
+  const selectedPlanLabel = selectedPlan
+    ? `${selectedPlan.title} - ${new Date(selectedPlan.scheduledFor).toLocaleDateString("fr-FR")}`
+    : "Rechercher un contenu planifie";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[640px]">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[760px]">
         <DialogHeader>
-          <DialogTitle>Nouveau creatif</DialogTitle>
+          <DialogTitle>{isEditing ? "Modifier le creatif" : "Nouveau creatif"}</DialogTitle>
           <DialogDescription>
             Planifiez un contenu a produire pour une date precise.
           </DialogDescription>
@@ -172,6 +289,120 @@ export function CreativeDeliverableForm({
               </Select>
             </div>
 
+            {canSelectPlan && (
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="deliverable-social-media">Texte social media a utiliser</Label>
+                <Popover open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={planPickerOpen}
+                      className="w-full justify-between"
+                      disabled={!selectedRequest?.clientName}
+                    >
+                      <span className="truncate">
+                        {!selectedRequest?.clientName
+                          ? "La fiche choisie n'a pas de client"
+                          : selectedPlanLabel}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Rechercher par date, titre, texte..." />
+                      <CommandList>
+                        <CommandEmpty>
+                          {selectedRequest?.clientName
+                            ? "Aucun contenu trouve pour ce client."
+                            : "La fiche doit avoir un client pour charger les contenus."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="Aucun texte selectionne"
+                            onSelect={() => {
+                              setField("socialMediaPlanId", "none");
+                              setPlanPickerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.socialMediaPlanId === "none" ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            Aucun texte selectionne
+                          </CommandItem>
+                          {filteredPlans.map((plan) => {
+                            const searchValue = [
+                              plan.title,
+                              plan.clientName || "",
+                              plan.platform || "",
+                              new Date(plan.scheduledFor).toLocaleDateString("fr-FR"),
+                              plan.captionHtml || "",
+                              plan.adCopyHtml || "",
+                            ].join(" ");
+
+                            return (
+                              <CommandItem
+                                key={plan.id}
+                                value={searchValue}
+                                onSelect={() => {
+                                  setField("socialMediaPlanId", plan.id);
+                                  setPlanPickerOpen(false);
+                                }}
+                                className="items-start"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 mt-0.5 h-4 w-4 shrink-0",
+                                    formData.socialMediaPlanId === plan.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{plan.title}</p>
+                                  <p className="truncate text-xs text-muted-foreground">
+                                    {new Date(plan.scheduledFor).toLocaleDateString("fr-FR")}
+                                    {plan.platform ? ` • ${plan.platform}` : ""}
+                                  </p>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedRequest?.clientName && filteredPlans.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Aucun contenu social media n&apos;est encore planifie pour {selectedRequest.clientName}.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {selectedPlan && (
+              <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+                <div className="rounded-lg border p-4">
+                  <p className="mb-2 text-xs uppercase text-muted-foreground">Texte d'accompagnement selectionne</p>
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: selectedPlan.captionHtml || "<p>Aucun texte.</p>" }}
+                  />
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy selectionne</p>
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: selectedPlan.adCopyHtml || "<p>Aucun ad copy.</p>" }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="deliverable-owner">Responsable</Label>
               <Select value={formData.ownerId} onValueChange={(value) => setField("ownerId", value)} disabled={loading}>
@@ -200,7 +431,7 @@ export function CreativeDeliverableForm({
               Annuler
             </Button>
             <Button type="submit" disabled={loading || !formData.requestId}>
-              {loading ? "Enregistrement..." : "Ajouter le creatif"}
+              {loading ? "Enregistrement..." : isEditing ? "Enregistrer les modifications" : "Ajouter le creatif"}
             </Button>
           </DialogFooter>
         </form>

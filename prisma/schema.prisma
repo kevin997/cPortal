@@ -282,6 +282,10 @@ model CreativeDeliverable {
   scheduledFor DateTime
   status      String   @default("planned") // planned, in_progress, delivered, published
   notes       String?  @db.Text
+  socialMediaPlanId      String?
+  socialMediaPlanTitle   String?
+  socialMediaCaptionHtml String?  @db.Text
+  socialMediaAdCopyHtml  String?  @db.Text
   createdById String
   ownerId     String?
   createdAt   DateTime @default(now())
@@ -290,10 +294,12 @@ model CreativeDeliverable {
   request   CreativeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   createdBy User            @relation("CreativeDeliverableCreator", fields: [createdById], references: [id], onDelete: Cascade)
   owner     User?           @relation("CreativeDeliverableOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  socialMediaPlan SocialMediaPlan? @relation(fields: [socialMediaPlanId], references: [id], onDelete: SetNull)
 
   @@index([scheduledFor])
   @@index([status])
   @@index([ownerId])
+  @@index([socialMediaPlanId])
   @@map("creative_deliverables")
 }
 
@@ -335,6 +341,7 @@ model SocialMediaPlan {
 
   createdBy       User              @relation("SocialMediaPlanCreator", fields: [createdById], references: [id], onDelete: Cascade)
   creativeRequests CreativeRequest[]
+  creativeDeliverables CreativeDeliverable[]
 
   @@index([scheduledFor])
   @@index([status])

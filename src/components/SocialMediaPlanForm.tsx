@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,11 +18,37 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_MEDIA_PLAN_STATUSES } from "@/lib/content";
 
+export interface SocialMediaPlanEditData {
+  id: string;
+  title: string;
+  clientName: string | null;
+  platform: string | null;
+  campaignName: string | null;
+  scheduledFor: string;
+  status: string;
+  captionHtml: string | null;
+  adCopyHtml: string | null;
+  briefHtml: string | null;
+}
+
 interface SocialMediaPlanFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDate?: string;
   onSuccess: () => void;
+  editData?: SocialMediaPlanEditData | null;
+}
+
+function datetimeLocalValue(value?: string | null, fallbackDate?: string) {
+  if (!value && fallbackDate) {
+    return `${fallbackDate}T10:00`;
+  }
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
 }
 
 const initialForm = (defaultDate?: string) => ({
@@ -30,20 +63,36 @@ const initialForm = (defaultDate?: string) => ({
   briefHtml: "",
 });
 
+function formFromEditData(editData: SocialMediaPlanEditData) {
+  return {
+    title: editData.title,
+    clientName: editData.clientName || "",
+    platform: editData.platform || "",
+    campaignName: editData.campaignName || "",
+    scheduledFor: datetimeLocalValue(editData.scheduledFor),
+    status: editData.status,
+    captionHtml: editData.captionHtml || "",
+    adCopyHtml: editData.adCopyHtml || "",
+    briefHtml: editData.briefHtml || "",
+  };
+}
+
 export function SocialMediaPlanForm({
   open,
   onOpenChange,
   defaultDate,
   onSuccess,
+  editData,
 }: SocialMediaPlanFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm(defaultDate));
+  const isEditing = !!editData;
 
   useEffect(() => {
     if (open) {
-      setFormData(initialForm(defaultDate));
+      setFormData(editData ? formFromEditData(editData) : initialForm(defaultDate));
     }
-  }, [open, defaultDate]);
+  }, [open, defaultDate, editData]);
 
   const setField = (field: keyof ReturnType<typeof initialForm>, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -54,19 +103,22 @@ export function SocialMediaPlanForm({
     setLoading(true);
 
     try {
-      const response = await fetch("/api/social-media/plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        isEditing ? `/api/social-media/plans/${editData.id}` : "/api/social-media/plans",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create social media plan");
+        throw new Error(error.error || "Failed to save social media plan");
       }
 
       toast({
-        title: "Plan social media cree",
+        title: isEditing ? "Plan social media mis a jour" : "Plan social media cree",
         description: formData.title,
         variant: "success",
       });
@@ -75,7 +127,7 @@ export function SocialMediaPlanForm({
     } catch (error: unknown) {
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de creer le plan",
+        description: error instanceof Error ? error.message : "Impossible d'enregistrer le plan",
         variant: "destructive",
       });
     } finally {
@@ -87,7 +139,9 @@ export function SocialMediaPlanForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="px-6 pt-6">Nouveau plan social media</DialogTitle>
+          <DialogTitle className="px-6 pt-6">
+            {isEditing ? "Modifier le plan social media" : "Nouveau plan social media"}
+          </DialogTitle>
           <DialogDescription className="px-6">
             Preparez le texte et l&apos;ad copy qui pourront etre reutilises lors des demandes creatives.
           </DialogDescription>
@@ -162,7 +216,7 @@ export function SocialMediaPlanForm({
               Annuler
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Enregistrement..." : "Creer le plan"}
+              {loading ? "Enregistrement..." : isEditing ? "Enregistrer les modifications" : "Creer le plan"}
             </Button>
           </DialogFooter>
         </form>

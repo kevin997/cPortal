@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CreativeAssetPicker } from "@/components/CreativeAssetPicker";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,9 +24,6 @@ import {
   CREATIVE_VALIDATION_OPTIONS,
   getCollaboratorRoleLabel,
 } from "@/lib/content";
-import { canSelectSocialMediaPlansForRequests } from "@/lib/access";
-import { useSession } from "next-auth/react";
-import { cn } from "@/lib/utils";
 
 interface CollaboratorOption {
   id: string;
@@ -37,22 +31,71 @@ interface CollaboratorOption {
   role: string;
 }
 
+export interface CreativeRequestEditData {
+  id: string;
+  reference: string;
+  requestDate: string | null;
+  requesterName: string;
+  requesterFunction: string | null;
+  servicePole: string | null;
+  clientName: string | null;
+  accountManager: string | null;
+  clientApproverContact: string | null;
+  contentType: string;
+  platform: string | null;
+  objective: string | null;
+  campaignName: string | null;
+  mainMessage: string | null;
+  callToAction: string | null;
+  copyProvided: boolean;
+  copywriterName: string | null;
+  desiredFormat: string | null;
+  quantity: number | null;
+  language: string | null;
+  includeLogo: boolean;
+  brandGuidelinesProvided: boolean;
+  priceToDisplay: string | null;
+  dateToDisplay: string | null;
+  timeToDisplay: string | null;
+  locationToDisplay: string | null;
+  contactNumber: string | null;
+  linkUrl: string | null;
+  hashtags: string | null;
+  legalMentions: string | null;
+  partnersSponsors: string | null;
+  mandatoryElements: string | null;
+  photosAvailable: boolean;
+  videosAvailable: boolean;
+  logoAvailable: boolean;
+  sourceTextAvailable: boolean;
+  visualReferences: string | null;
+  referenceLinks: string | null;
+  assetLocation: string | null;
+  creativeDueDate: string | null;
+  publicationDate: string | null;
+  publicationTime: string | null;
+  urgency: string;
+  validationRequired: string;
+  feedbackRounds: number | null;
+  requesterValidation: string | null;
+  marketingValidation: string | null;
+  clientValidation: string | null;
+  finalValidation: string | null;
+  additionalNotes: string | null;
+  workflowStatus: string;
+  workflowResponsible: string | null;
+  workflowDate: string | null;
+  assignedTo: {
+    id: string;
+  } | null;
+}
+
 interface CreativeRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   collaborators: CollaboratorOption[];
-  socialMediaPlans: SocialMediaPlanOption[];
   onSuccess: () => void;
-}
-
-interface SocialMediaPlanOption {
-  id: string;
-  title: string;
-  clientName: string | null;
-  platform: string | null;
-  scheduledFor: string;
-  captionHtml: string | null;
-  adCopyHtml: string | null;
+  editData?: CreativeRequestEditData | null;
 }
 
 function todayDate() {
@@ -62,6 +105,10 @@ function todayDate() {
 function makeReference() {
   const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 12);
   return `CR-${stamp}`;
+}
+
+function dateInputValue(value?: string | null) {
+  return value ? new Date(value).toISOString().slice(0, 10) : "";
 }
 
 const initialForm = () => ({
@@ -118,48 +165,87 @@ const initialForm = () => ({
   workflowResponsible: "",
   workflowDate: "",
   assignedToId: "none",
-  socialMediaPlanId: "none",
 });
+
+function formFromEditData(editData: CreativeRequestEditData) {
+  return {
+    reference: editData.reference,
+    requestDate: dateInputValue(editData.requestDate) || todayDate(),
+    requesterName: editData.requesterName,
+    requesterFunction: editData.requesterFunction || "",
+    servicePole: editData.servicePole || "",
+    clientName: editData.clientName || "",
+    accountManager: editData.accountManager || "",
+    clientApproverContact: editData.clientApproverContact || "",
+    contentType: editData.contentType,
+    platform: editData.platform || "",
+    objective: editData.objective || "",
+    campaignName: editData.campaignName || "",
+    mainMessage: editData.mainMessage || "",
+    callToAction: editData.callToAction || "",
+    copyProvided: editData.copyProvided,
+    copywriterName: editData.copywriterName || "",
+    desiredFormat: editData.desiredFormat || "",
+    quantity: editData.quantity ? String(editData.quantity) : "",
+    language: editData.language || "Francais",
+    includeLogo: editData.includeLogo,
+    brandGuidelinesProvided: editData.brandGuidelinesProvided,
+    priceToDisplay: editData.priceToDisplay || "",
+    dateToDisplay: editData.dateToDisplay || "",
+    timeToDisplay: editData.timeToDisplay || "",
+    locationToDisplay: editData.locationToDisplay || "",
+    contactNumber: editData.contactNumber || "",
+    linkUrl: editData.linkUrl || "",
+    hashtags: editData.hashtags || "",
+    legalMentions: editData.legalMentions || "",
+    partnersSponsors: editData.partnersSponsors || "",
+    mandatoryElements: editData.mandatoryElements || "",
+    photosAvailable: editData.photosAvailable,
+    videosAvailable: editData.videosAvailable,
+    logoAvailable: editData.logoAvailable,
+    sourceTextAvailable: editData.sourceTextAvailable,
+    visualReferences: editData.visualReferences || "",
+    referenceLinks: editData.referenceLinks || "",
+    assetLocation: editData.assetLocation || "",
+    creativeDueDate: dateInputValue(editData.creativeDueDate),
+    publicationDate: dateInputValue(editData.publicationDate),
+    publicationTime: editData.publicationTime || "",
+    urgency: editData.urgency,
+    validationRequired: editData.validationRequired,
+    feedbackRounds: editData.feedbackRounds ? String(editData.feedbackRounds) : "",
+    requesterValidation: editData.requesterValidation || "",
+    marketingValidation: editData.marketingValidation || "",
+    clientValidation: editData.clientValidation || "",
+    finalValidation: editData.finalValidation || "",
+    additionalNotes: editData.additionalNotes || "",
+    workflowStatus: editData.workflowStatus,
+    workflowResponsible: editData.workflowResponsible || "",
+    workflowDate: dateInputValue(editData.workflowDate),
+    assignedToId: editData.assignedTo?.id || "none",
+  };
+}
 
 export function CreativeRequestForm({
   open,
   onOpenChange,
   collaborators,
-  socialMediaPlans,
   onSuccess,
+  editData,
 }: CreativeRequestFormProps) {
-  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm);
   const [files, setFiles] = useState<File[]>([]);
-  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+  const isEditing = !!editData;
 
   useEffect(() => {
     if (open) {
-      setFormData(initialForm());
+      setFormData(editData ? formFromEditData(editData) : initialForm());
       setFiles([]);
-      setPlanPickerOpen(false);
     }
-  }, [open]);
+  }, [open, editData]);
 
   const setField = (field: string, value: string | boolean) => {
-    setFormData((prev) => {
-      const next = { ...prev, [field]: value };
-      if (field === "clientName") {
-        const normalizedClient = typeof value === "string" ? value.trim().toLowerCase() : "";
-        const currentSelectedPlan = socialMediaPlans.find(
-          (plan) => plan.id === prev.socialMediaPlanId
-        );
-        if (
-          currentSelectedPlan &&
-          normalizedClient &&
-          (currentSelectedPlan.clientName || "").trim().toLowerCase() !== normalizedClient
-        ) {
-          next.socialMediaPlanId = "none";
-        }
-      }
-      return next;
-    });
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -170,28 +256,29 @@ export function CreativeRequestForm({
       const payload = {
         ...formData,
         assignedToId: formData.assignedToId === "none" ? null : formData.assignedToId,
-        socialMediaPlanId:
-          formData.socialMediaPlanId === "none" ? null : formData.socialMediaPlanId,
       };
 
-      const response = await fetch("/api/content/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        isEditing ? `/api/content/requests/${editData.id}` : "/api/content/requests",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create request");
+        throw new Error(error.error || "Failed to save request");
       }
 
-      const createdRequest = await response.json();
+      const savedRequest = await response.json();
 
-      if (files.length > 0) {
+      if (!isEditing && files.length > 0) {
         const assetFormData = new FormData();
         files.forEach((file) => assetFormData.append("files", file));
 
-        const uploadResponse = await fetch(`/api/content/requests/${createdRequest.id}/assets`, {
+        const uploadResponse = await fetch(`/api/content/requests/${savedRequest.id}/assets`, {
           method: "POST",
           body: assetFormData,
         });
@@ -203,9 +290,10 @@ export function CreativeRequestForm({
       }
 
       toast({
-        title: "Demande enregistree",
-        description:
-          files.length > 0
+        title: isEditing ? "Fiche mise a jour" : "Demande enregistree",
+        description: isEditing
+          ? `La fiche ${formData.reference} a ete mise a jour.`
+          : files.length > 0
             ? `La fiche ${formData.reference} et ses fichiers ont ete ajoutes.`
             : `La fiche ${formData.reference} a ete ajoutee.`,
         variant: "success",
@@ -215,7 +303,7 @@ export function CreativeRequestForm({
     } catch (error: unknown) {
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de creer la fiche",
+        description: error instanceof Error ? error.message : "Impossible d'enregistrer la fiche",
         variant: "destructive",
       });
     } finally {
@@ -234,30 +322,11 @@ export function CreativeRequestForm({
     </label>
   );
 
-  const selectedPlan =
-    formData.socialMediaPlanId !== "none"
-      ? socialMediaPlans.find((plan) => plan.id === formData.socialMediaPlanId)
-      : null;
-  const canSelectPlan = canSelectSocialMediaPlansForRequests(session?.user?.role);
-  const normalizedClientName = formData.clientName.trim().toLowerCase();
-  const filteredPlans = useMemo(() => {
-    if (!normalizedClientName) {
-      return [];
-    }
-
-    return socialMediaPlans.filter(
-      (plan) => (plan.clientName || "").trim().toLowerCase() === normalizedClientName
-    );
-  }, [normalizedClientName, socialMediaPlans]);
-  const selectedPlanLabel = selectedPlan
-    ? `${selectedPlan.title} - ${new Date(selectedPlan.scheduledFor).toLocaleDateString("fr-FR")}`
-    : "Rechercher un contenu planifie";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[calc(100vw-2rem)] p-0 sm:max-w-5xl">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle>Nouvelle fiche de besoin</DialogTitle>
+          <DialogTitle>{isEditing ? "Modifier la fiche de besoin" : "Nouvelle fiche de besoin"}</DialogTitle>
           <DialogDescription>
             Brief creatif base sur la fiche de creation de contenu CSL Brands.
           </DialogDescription>
@@ -318,119 +387,7 @@ export function CreativeRequestForm({
                     </SelectContent>
                   </Select>
                 </div>
-                {canSelectPlan && (
-                  <div className="space-y-2 xl:col-span-3">
-                    <Label htmlFor="socialMediaPlanId">Texte social media a utiliser</Label>
-                    <Popover open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={planPickerOpen}
-                          className="w-full justify-between"
-                          disabled={!normalizedClientName}
-                        >
-                          <span className="truncate">
-                            {!normalizedClientName
-                              ? "Selectionnez d'abord le client"
-                              : selectedPlanLabel}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Rechercher par date, titre, texte..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {normalizedClientName
-                                ? "Aucun contenu trouve pour ce client."
-                                : "Selectionnez un client pour charger les contenus."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="Aucun texte selectionne"
-                                onSelect={() => {
-                                  setField("socialMediaPlanId", "none");
-                                  setPlanPickerOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.socialMediaPlanId === "none" ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                Aucun texte selectionne
-                              </CommandItem>
-                              {filteredPlans.map((plan) => {
-                                const searchValue = [
-                                  plan.title,
-                                  plan.clientName || "",
-                                  plan.platform || "",
-                                  new Date(plan.scheduledFor).toLocaleDateString("fr-FR"),
-                                  plan.captionHtml || "",
-                                  plan.adCopyHtml || "",
-                                ].join(" ");
-
-                                return (
-                                  <CommandItem
-                                    key={plan.id}
-                                    value={searchValue}
-                                    onSelect={() => {
-                                      setField("socialMediaPlanId", plan.id);
-                                      setPlanPickerOpen(false);
-                                    }}
-                                    className="items-start"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 mt-0.5 h-4 w-4 shrink-0",
-                                        formData.socialMediaPlanId === plan.id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="truncate font-medium">{plan.title}</p>
-                                      <p className="truncate text-xs text-muted-foreground">
-                                        {new Date(plan.scheduledFor).toLocaleDateString("fr-FR")}
-                                        {plan.platform ? ` • ${plan.platform}` : ""}
-                                      </p>
-                                    </div>
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {normalizedClientName && filteredPlans.length === 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Aucun contenu social media n&apos;est encore planifie pour ce client.
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
-              {selectedPlan && (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <p className="mb-2 text-xs uppercase text-muted-foreground">Texte d'accompagnement selectionne</p>
-                    <div
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: selectedPlan.captionHtml || "<p>Aucun texte.</p>" }}
-                    />
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <p className="mb-2 text-xs uppercase text-muted-foreground">Ad copy selectionne</p>
-                    <div
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: selectedPlan.adCopyHtml || "<p>Aucun ad copy.</p>" }}
-                    />
-                  </div>
-                </div>
-              )}
             </section>
 
             <section className="space-y-4">
@@ -546,7 +503,12 @@ export function CreativeRequestForm({
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Ressources et delais
               </h3>
-              <CreativeAssetPicker files={files} onChange={setFiles} disabled={loading} />
+              {!isEditing && <CreativeAssetPicker files={files} onChange={setFiles} disabled={loading} />}
+              {isEditing && (
+                <p className="text-sm text-muted-foreground">
+                  Les fichiers existants se gerent depuis la fiche detaillee via l&apos;espace de contexte.
+                </p>
+              )}
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="visualReferences">References visuelles</Label>
@@ -667,7 +629,7 @@ export function CreativeRequestForm({
             Annuler
           </Button>
           <Button form="creative-request-form" type="submit" disabled={loading}>
-            {loading ? "Enregistrement..." : "Creer la fiche"}
+            {loading ? "Enregistrement..." : isEditing ? "Enregistrer les modifications" : "Creer la fiche"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -432,10 +433,13 @@ export function CreativeRequestForm({
                   <Input id="copywriterName" value={formData.copywriterName} onChange={(event) => setField("copywriterName", event.target.value)} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="mainMessage">Message principal</Label>
-                <Textarea id="mainMessage" rows={3} value={formData.mainMessage} onChange={(event) => setField("mainMessage", event.target.value)} />
-              </div>
+              <RichTextEditor
+                label="Message principal"
+                value={formData.mainMessage}
+                onChange={(value) => setField("mainMessage", value)}
+                placeholder="Message cle, angle, structure, points a faire ressortir..."
+                minHeightClassName="min-h-[140px]"
+              />
               <div className="grid gap-4 md:grid-cols-2">
                 {booleanField("copyProvided", "Texte / copy fourni", "copyProvided")}
               </div>

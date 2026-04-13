@@ -55,7 +55,12 @@ export async function uploadFileToCloudinary({
 }: UploadCloudinaryFileOptions): Promise<CloudinaryUploadResult> {
   const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = signCloudinaryParams({ folder, timestamp }, apiSecret);
+  const useFilename = "true";
+  const uniqueFilename = "true";
+  const signature = signCloudinaryParams(
+    { folder, timestamp, use_filename: useFilename, unique_filename: uniqueFilename },
+    apiSecret
+  );
 
   const formData = new FormData();
   formData.append("file", file);
@@ -63,8 +68,8 @@ export async function uploadFileToCloudinary({
   formData.append("timestamp", timestamp);
   formData.append("api_key", apiKey);
   formData.append("signature", signature);
-  formData.append("use_filename", "true");
-  formData.append("unique_filename", "true");
+  formData.append("use_filename", useFilename);
+  formData.append("unique_filename", uniqueFilename);
 
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,

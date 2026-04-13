@@ -706,7 +706,10 @@ export default function CreationContenuPage() {
                   {request.mainMessage && (
                     <div className="rounded-lg border p-4">
                       <p className="text-xs uppercase text-muted-foreground">Message principal</p>
-                      <p className="mt-2 text-sm">{request.mainMessage}</p>
+                      <div
+                        className="prose prose-sm mt-2 max-w-none"
+                        dangerouslySetInnerHTML={{ __html: request.mainMessage }}
+                      />
                     </div>
                   )}
 

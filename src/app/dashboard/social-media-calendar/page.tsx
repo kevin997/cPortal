@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   CalendarRange,
+  Check,
   ChevronLeft,
   ChevronRight,
   Filter,
+  ChevronsUpDown,
   Megaphone,
   Pencil,
   PlusCircle,
@@ -18,6 +20,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { canEditSocialMediaPlans } from "@/lib/access";
@@ -96,8 +107,10 @@ export default function SocialMediaCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [plans, setPlans] = useState<SocialMediaPlan[]>([]);
+  const [clients, setClients] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [editingPlan, setEditingPlan] = useState<SocialMediaPlanEditData | null>(null);
@@ -123,9 +136,30 @@ export default function SocialMediaCalendarPage() {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const response = await fetch("/api/content/clients");
+      if (!response.ok) {
+        throw new Error("Failed to fetch clients");
+      }
+      const data = await response.json();
+      setClients(data);
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger la liste des clients",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchPlans();
   }, [monthKey]);
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
   const filteredPlans = useMemo(() => {
     return plans.filter((plan) => {
@@ -175,12 +209,6 @@ export default function SocialMediaCalendarPage() {
     ).sort();
   }, [plans]);
 
-  const clientOptions = useMemo(() => {
-    return Array.from(
-      new Set(plans.map((plan) => plan.clientName?.trim() || "none"))
-    ).sort();
-  }, [plans]);
-
   const goToPreviousMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
@@ -216,6 +244,9 @@ export default function SocialMediaCalendarPage() {
     setFormOpen(true);
   };
 
+  const selectedClientLabel =
+    clientFilter === "all" ? "Tous les clients" : clientFilter;
+
   return (
     <div className="space-y-6 py-6">
       <div className="space-y-2">
@@ -228,21 +259,61 @@ export default function SocialMediaCalendarPage() {
       <div className="rounded-[28px] border border-border/60 bg-card shadow-[0_24px_60px_-28px_rgba(15,23,42,0.28)]">
         <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-2">
-              <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger className="h-auto w-[180px] border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                  <SelectValue placeholder="Tous les clients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les clients</SelectItem>
-                  {clientOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "none" ? "Sans client" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={clientPickerOpen}
+                  className="w-[220px] justify-between rounded-xl"
+                >
+                  <span className="truncate">{selectedClientLabel}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Rechercher un client..." />
+                  <CommandList>
+                    <CommandEmpty>Aucun client trouve.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="Tous les clients"
+                        onSelect={() => {
+                          setClientFilter("all");
+                          setClientPickerOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            clientFilter === "all" ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        Tous les clients
+                      </CommandItem>
+                      {clients.map((client) => (
+                        <CommandItem
+                          key={client}
+                          value={client}
+                          onSelect={() => {
+                            setClientFilter(client);
+                            setClientPickerOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              clientFilter === client ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          {client}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" onClick={goToToday}>
               Today
             </Button>

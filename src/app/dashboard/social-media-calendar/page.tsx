@@ -98,6 +98,7 @@ export default function SocialMediaCalendarPage() {
   const [plans, setPlans] = useState<SocialMediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [clientFilter, setClientFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [editingPlan, setEditingPlan] = useState<SocialMediaPlanEditData | null>(null);
 
@@ -127,12 +128,15 @@ export default function SocialMediaCalendarPage() {
   }, [monthKey]);
 
   const filteredPlans = useMemo(() => {
-    if (platformFilter === "all") {
-      return plans;
-    }
+    return plans.filter((plan) => {
+      const matchesClient =
+        clientFilter === "all" || (plan.clientName?.trim() || "none") === clientFilter;
+      const matchesPlatform =
+        platformFilter === "all" || (plan.platform?.trim() || "none") === platformFilter;
 
-    return plans.filter((plan) => (plan.platform || "none") === platformFilter);
-  }, [plans, platformFilter]);
+      return matchesClient && matchesPlatform;
+    });
+  }, [clientFilter, plans, platformFilter]);
 
   const visibleDays = useMemo(() => {
     const first = startOfWeek(startOfMonth(currentMonth));
@@ -167,7 +171,13 @@ export default function SocialMediaCalendarPage() {
 
   const platformOptions = useMemo(() => {
     return Array.from(
-      new Set(plans.map((plan) => plan.platform || "none"))
+      new Set(plans.map((plan) => plan.platform?.trim() || "none"))
+    ).sort();
+  }, [plans]);
+
+  const clientOptions = useMemo(() => {
+    return Array.from(
+      new Set(plans.map((plan) => plan.clientName?.trim() || "none"))
     ).sort();
   }, [plans]);
 
@@ -218,8 +228,20 @@ export default function SocialMediaCalendarPage() {
       <div className="rounded-[28px] border border-border/60 bg-card shadow-[0_24px_60px_-28px_rgba(15,23,42,0.28)]">
         <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              CSL Brands
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-2">
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="h-auto w-[180px] border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                  <SelectValue placeholder="Tous les clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les clients</SelectItem>
+                  {clientOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "none" ? "Sans client" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button variant="outline" onClick={goToToday}>
               Today

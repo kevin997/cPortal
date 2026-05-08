@@ -13,10 +13,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_MEDIA_PLAN_STATUSES } from "@/lib/content";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 export interface SocialMediaPlanEditData {
   id: string;
@@ -37,6 +53,7 @@ interface SocialMediaPlanFormProps {
   defaultDate?: string;
   onSuccess: () => void;
   editData?: SocialMediaPlanEditData | null;
+  clients?: string[];
 }
 
 function datetimeLocalValue(value?: string | null, fallbackDate?: string) {
@@ -83,6 +100,7 @@ export function SocialMediaPlanForm({
   defaultDate,
   onSuccess,
   editData,
+  clients = [],
 }: SocialMediaPlanFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialForm(defaultDate));
@@ -157,7 +175,50 @@ export function SocialMediaPlanForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sm-client">Client</Label>
-                  <Input id="sm-client" value={formData.clientName} onChange={(event) => setField("clientName", event.target.value)} placeholder="Ex. CSL Brands, KURSA..." />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        id="sm-client"
+                        className="w-full justify-between"
+                      >
+                        <span className="truncate">
+                          {formData.clientName || "Selectionner un client..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                      <Command>
+                        <CommandInput placeholder="Rechercher un client..." />
+                        <CommandList>
+                          <CommandEmpty>Aucun client trouve.</CommandEmpty>
+                          <CommandGroup>
+                            {clients.length === 0 && (
+                              <CommandItem value="" disabled>
+                                Aucun client disponible
+                              </CommandItem>
+                            )}
+                            {clients.map((client) => (
+                              <CommandItem
+                                key={client}
+                                value={client}
+                                onSelect={() => setField("clientName", client)}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${formData.clientName === client ? "opacity-100" : "opacity-0"
+                                    }`}
+                                />
+                                {client}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sm-platform">Plateforme</Label>

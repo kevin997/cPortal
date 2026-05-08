@@ -286,9 +286,8 @@ export default function SocialMediaCalendarPage() {
                         }}
                       >
                         <Check
-                          className={`mr-2 h-4 w-4 ${
-                            clientFilter === "all" ? "opacity-100" : "opacity-0"
-                          }`}
+                          className={`mr-2 h-4 w-4 ${clientFilter === "all" ? "opacity-100" : "opacity-0"
+                            }`}
                         />
                         Tous les clients
                       </CommandItem>
@@ -302,9 +301,8 @@ export default function SocialMediaCalendarPage() {
                           }}
                         >
                           <Check
-                            className={`mr-2 h-4 w-4 ${
-                              clientFilter === client ? "opacity-100" : "opacity-0"
-                            }`}
+                            className={`mr-2 h-4 w-4 ${clientFilter === client ? "opacity-100" : "opacity-0"
+                              }`}
                           />
                           {client}
                         </CommandItem>
@@ -387,21 +385,19 @@ export default function SocialMediaCalendarPage() {
                       key={day.toISOString()}
                       type="button"
                       onClick={() => setSelectedDate(day)}
-                      className={`min-h-[180px] border-b border-r border-border/60 p-3 text-left align-top transition-colors ${
-                        isSelected
+                      className={`min-h-[180px] border-b border-r border-border/60 p-3 text-left align-top transition-colors ${isSelected
                           ? "bg-primary/[0.06]"
                           : isCurrentMonth
                             ? "bg-background hover:bg-muted/30"
                             : "bg-muted/20 text-muted-foreground hover:bg-muted/30"
-                      }`}
+                        }`}
                     >
                       <div className="mb-3 flex items-center justify-between">
                         <span
-                          className={`text-sm font-semibold ${
-                            isToday
+                          className={`text-sm font-semibold ${isToday
                               ? "rounded-full bg-primary px-2 py-1 text-primary-foreground"
                               : ""
-                          }`}
+                            }`}
                         >
                           {day.getDate()}
                         </span>
@@ -600,6 +596,7 @@ export default function SocialMediaCalendarPage() {
         defaultDate={selectedDate.toISOString().slice(0, 10)}
         editData={editingPlan}
         onSuccess={fetchPlans}
+        clients={clients}
       />
     </div>
   );

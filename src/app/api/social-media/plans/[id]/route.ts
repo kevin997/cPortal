@@ -84,3 +84,32 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session || !canEditSocialMediaPlans(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    await prisma.socialMediaPlan.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Social media plan deleted successfully" });
+  } catch (error: any) {
+    console.error("Error deleting social media plan:", error);
+    if (error.code === "P2025") {
+      return NextResponse.json({ error: "Social media plan not found" }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: "Failed to delete social media plan" },
+      { status: 500 }
+    );
+  }
+}

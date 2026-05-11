@@ -12,6 +12,7 @@ import {
   Megaphone,
   Pencil,
   PlusCircle,
+  Trash2,
 } from "lucide-react";
 import {
   SocialMediaPlanForm,
@@ -114,6 +115,7 @@ export default function SocialMediaCalendarPage() {
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [editingPlan, setEditingPlan] = useState<SocialMediaPlanEditData | null>(null);
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
 
   const monthKey = useMemo(() => formatMonthKey(currentMonth), [currentMonth]);
 
@@ -242,6 +244,40 @@ export default function SocialMediaCalendarPage() {
       briefHtml: plan.briefHtml,
     });
     setFormOpen(true);
+  };
+
+  const deletePlan = async (plan: SocialMediaPlan) => {
+    if (!confirm(`Supprimer le plan "${plan.title}" ?`)) {
+      return;
+    }
+
+    try {
+      setDeletingPlanId(plan.id);
+      const response = await fetch(`/api/social-media/plans/${plan.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Impossible de supprimer le plan");
+      }
+
+      toast({
+        title: "Plan supprime",
+        description: `"${plan.title}" a ete supprime du calendrier.`,
+        variant: "success",
+      });
+
+      await fetchPlans();
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible de supprimer le plan",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPlanId(null);
+    }
   };
 
   const selectedClientLabel =
@@ -381,11 +417,18 @@ export default function SocialMediaCalendarPage() {
                   const isToday = sameDay(day, new Date());
 
                   return (
-                    <button
+                    <div
                       key={day.toISOString()}
-                      type="button"
                       onClick={() => setSelectedDate(day)}
-                      className={`min-h-[180px] border-b border-r border-border/60 p-3 text-left align-top transition-colors ${isSelected
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedDate(day);
+                        }
+                      }}
+                      className={`min-h-[180px] cursor-pointer border-b border-r border-border/60 p-3 text-left align-top transition-colors ${isSelected
                           ? "bg-primary/[0.06]"
                           : isCurrentMonth
                             ? "bg-background hover:bg-muted/30"
@@ -423,12 +466,30 @@ export default function SocialMediaCalendarPage() {
                                   {plan.clientName || "CSL Brands"} {plan.platform ? `• ${plan.platform}` : ""}
                                 </p>
                               </div>
-                              <span className="shrink-0 text-[11px] font-medium text-slate-500">
-                                {new Date(plan.scheduledFor).toLocaleTimeString("fr-FR", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <span className="text-[11px] font-medium text-slate-500">
+                                  {new Date(plan.scheduledFor).toLocaleTimeString("fr-FR", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                {canEditSocialMediaPlans(session?.user?.role) && (
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    aria-label={`Supprimer ${plan.title}`}
+                                    className="h-6 w-6 text-destructive hover:text-destructive"
+                                    disabled={deletingPlanId === plan.id}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      deletePlan(plan);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                             {plan.adCopyHtml && (
                               <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">
@@ -436,19 +497,35 @@ export default function SocialMediaCalendarPage() {
                               </p>
                             )}
                             {canEditSocialMediaPlans(session?.user?.role) && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="mt-2 h-7 px-2 text-[11px]"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openEditPlan(plan);
-                                }}
-                              >
-                                <Pencil className="mr-1 h-3 w-3" />
-                                Modifier
-                              </Button>
+                              <div className="mt-2 flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 flex-1 px-2 text-[11px]"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openEditPlan(plan);
+                                  }}
+                                >
+                                  <Pencil className="mr-1 h-3 w-3" />
+                                  Modifier
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  aria-label={`Supprimer ${plan.title}`}
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  disabled={deletingPlanId === plan.id}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    deletePlan(plan);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -459,7 +536,7 @@ export default function SocialMediaCalendarPage() {
                           </div>
                         )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -522,10 +599,22 @@ export default function SocialMediaCalendarPage() {
                         <Badge variant="secondary">{getSocialMediaPlanStatusLabel(plan.status)}</Badge>
                       </div>
                       {canEditSocialMediaPlans(session?.user?.role) && (
-                        <Button size="sm" variant="outline" onClick={() => openEditPlan(plan)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Modifier
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditPlan(plan)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Modifier
+                          </Button>
+                          <Button
+                            size="icon-sm"
+                            variant="outline"
+                            aria-label={`Supprimer ${plan.title}`}
+                            className="text-destructive hover:text-destructive"
+                            disabled={deletingPlanId === plan.id}
+                            onClick={() => deletePlan(plan)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </div>
 

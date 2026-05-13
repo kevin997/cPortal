@@ -20,6 +20,8 @@ interface Student {
   dateOfBirth?: string;
   gender?: string;
   paymentStatus: "paid" | "partially_paid" | "pending" | "overdue" | "cancelled";
+  totalAmountDue: number;
+  amountPaid: number;
   notes?: string;
   createdAt: string;
   _count?: {
@@ -34,6 +36,10 @@ const paymentStatusLabels: Record<Student["paymentStatus"], string> = {
   overdue: "Retard",
   cancelled: "Annule",
 };
+
+function fmtMoney(amount: number) {
+  return amount.toLocaleString("fr-FR");
+}
 
 const paymentStatusColors: Record<Student["paymentStatus"], "default" | "secondary" | "success" | "warning" | "destructive"> = {
   paid: "success",
@@ -186,7 +192,7 @@ export default function StudentsPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {students.map((student) => (
-              <Card key={student.id} className="group hover:shadow-md transition-shadow">
+              <Card key={student.id} className="group transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-lg">{student.fullName}</CardTitle>
@@ -224,6 +230,20 @@ export default function StudentsPage() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/40 p-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Paid</p>
+                      <p className="font-semibold text-emerald-700">
+                        {fmtMoney(student.amountPaid || 0)} FCFA
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Remaining</p>
+                      <p className={`font-semibold ${(student.totalAmountDue || 0) - (student.amountPaid || 0) > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+                        {fmtMoney(Math.max((student.totalAmountDue || 0) - (student.amountPaid || 0), 0))} FCFA
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="w-4 h-4 shrink-0" />
                     <span className="truncate">{student.email}</span>

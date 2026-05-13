@@ -97,6 +97,8 @@ model Student {
   dateOfBirth   DateTime?
   gender        String?
   paymentStatus String    @default("pending") // paid, partially_paid, pending, overdue, cancelled
+  totalAmountDue Int      @default(0)
+  amountPaid    Int       @default(0)
   notes         String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

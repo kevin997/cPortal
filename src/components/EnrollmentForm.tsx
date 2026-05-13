@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface EnrollmentFormProps {
   open: boolean;
@@ -132,64 +132,42 @@ export function EnrollmentForm({ open, onOpenChange, onSuccess }: EnrollmentForm
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="studentId">Student *</Label>
-            <Select
+            <SearchableSelect
+              id="studentId"
               value={formData.studentId}
               onValueChange={(value) => handleChange("studentId", value)}
               disabled={loading}
-              required
-            >
-              <SelectTrigger id="studentId">
-                <SelectValue placeholder="Select a student" />
-              </SelectTrigger>
-              <SelectContent>
-                {students.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No students available
-                  </div>
-                ) : (
-                  students.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.fullName} ({student.email})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+              placeholder="Select a student"
+              searchPlaceholder="Search student..."
+              emptyText="No students available."
+              options={students.map((student) => ({
+                value: student.id,
+                label: `${student.fullName} (${student.email})`,
+                searchValue: `${student.fullName} ${student.email} ${student.phoneNumber || ""}`,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="bootcampSessionId">Bootcamp Session *</Label>
-            <Select
+            <SearchableSelect
+              id="bootcampSessionId"
               value={formData.bootcampSessionId}
               onValueChange={(value) => handleChange("bootcampSessionId", value)}
               disabled={loading}
-              required
-            >
-              <SelectTrigger id="bootcampSessionId">
-                <SelectValue placeholder="Select a bootcamp" />
-              </SelectTrigger>
-              <SelectContent>
-                {bootcamps.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No active bootcamps available
-                  </div>
-                ) : (
-                  bootcamps.map((bootcamp) => {
-                    const full = bootcamp.currentCapacity >= bootcamp.targetCapacity;
-                    return (
-                      <SelectItem
-                        key={bootcamp.id}
-                        value={bootcamp.id}
-                        disabled={full}
-                      >
-                        {bootcamp.name}
-                        {full && " (Full)"}
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
+              placeholder="Select a bootcamp"
+              searchPlaceholder="Search bootcamp..."
+              emptyText="No active bootcamps available."
+              options={bootcamps.map((bootcamp) => {
+                const full = bootcamp.currentCapacity >= bootcamp.targetCapacity;
+                return {
+                  value: bootcamp.id,
+                  label: `${bootcamp.name}${full ? " (Full)" : ""}`,
+                  searchValue: `${bootcamp.name} ${bootcamp.status || ""} ${bootcamp.location || ""}`,
+                  disabled: full,
+                };
+              })}
+            />
             {capacityInfo && (
               <p className={`text-sm ${isFull ? "text-destructive" : "text-muted-foreground"}`}>
                 {capacityInfo}

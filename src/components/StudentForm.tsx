@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 const PAYMENT_STATUSES = [
   { value: "paid", label: "Paye" },
@@ -42,6 +42,8 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
     dateOfBirth: student?.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : "",
     gender: student?.gender || "none",
     paymentStatus: student?.paymentStatus || "pending",
+    totalAmountDue: student?.totalAmountDue ? String(student.totalAmountDue) : "",
+    amountPaid: student?.amountPaid ? String(student.amountPaid) : "",
     notes: student?.notes || "",
   });
 
@@ -60,6 +62,8 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
           ...formData,
           dateOfBirth: formData.dateOfBirth || null,
           gender: formData.gender === "none" ? null : formData.gender,
+          totalAmountDue: Number(formData.totalAmountDue || 0),
+          amountPaid: Number(formData.amountPaid || 0),
         }),
       });
 
@@ -88,6 +92,8 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
           dateOfBirth: "",
           gender: "none",
           paymentStatus: "pending",
+          totalAmountDue: "",
+          amountPaid: "",
           notes: "",
         });
       }
@@ -130,22 +136,49 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
 
           <div className="space-y-2">
             <Label htmlFor="paymentStatus">Payment Status</Label>
-            <Select
+            <SearchableSelect
+              id="paymentStatus"
               value={formData.paymentStatus}
               onValueChange={(value) => handleChange("paymentStatus", value)}
               disabled={loading}
-            >
-              <SelectTrigger id="paymentStatus">
-                <SelectValue placeholder="Select payment status" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select payment status"
+              searchPlaceholder="Search payment status..."
+              emptyText="No status found."
+              options={PAYMENT_STATUSES.map((status) => ({
+                value: status.value,
+                label: status.label,
+              }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="totalAmountDue">Total Amount Due (FCFA)</Label>
+              <Input
+                id="totalAmountDue"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.totalAmountDue}
+                onChange={(e) => handleChange("totalAmountDue", e.target.value)}
+                disabled={loading}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amountPaid">Amount Paid (FCFA)</Label>
+              <Input
+                id="amountPaid"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.amountPaid}
+                onChange={(e) => handleChange("amountPaid", e.target.value)}
+                disabled={loading}
+                placeholder="0"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -210,21 +243,21 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
 
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
-              <Select
+              <SearchableSelect
+                id="gender"
                 value={formData.gender}
                 onValueChange={(value) => handleChange("gender", value)}
                 disabled={loading}
-              >
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Prefer not to say</SelectItem>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Select gender"
+                searchPlaceholder="Search gender..."
+                emptyText="No gender found."
+                options={[
+                  { value: "none", label: "Prefer not to say" },
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                  { value: "other", label: "Other" },
+                ]}
+              />
             </div>
           </div>
 

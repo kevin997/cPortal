@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface BootcampFormProps {
   open: boolean;
@@ -169,21 +169,21 @@ export function BootcampForm({ open, onOpenChange, bootcamp, onSuccess }: Bootca
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
+              <SearchableSelect
+                id="status"
                 value={formData.status}
                 onValueChange={(value) => handleChange("status", value)}
                 disabled={loading}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="ongoing">Ongoing</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Select status"
+                searchPlaceholder="Search status..."
+                emptyText="No status found."
+                options={[
+                  { value: "upcoming", label: "Upcoming" },
+                  { value: "ongoing", label: "Ongoing" },
+                  { value: "completed", label: "Completed" },
+                  { value: "cancelled", label: "Cancelled" },
+                ]}
+              />
             </div>
           </div>
 

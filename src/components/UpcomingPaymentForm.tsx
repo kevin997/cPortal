@@ -6,13 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 const BENEFICIARY_TYPES = [
   { value: "vendor", label: "Fournisseur" },
@@ -189,22 +183,19 @@ export function UpcomingPaymentForm({
 
           <div className="space-y-2">
             <Label htmlFor="beneficiaryType">Type *</Label>
-            <Select
+            <SearchableSelect
+              id="beneficiaryType"
               value={formData.beneficiaryType}
               onValueChange={(value) => handleChange("beneficiaryType", value)}
               disabled={loading}
-            >
-              <SelectTrigger id="beneficiaryType">
-                <SelectValue placeholder="Selectionner un type" />
-              </SelectTrigger>
-              <SelectContent>
-                {BENEFICIARY_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selectionner un type"
+              searchPlaceholder="Rechercher un type..."
+              emptyText="Aucun type trouve."
+              options={BENEFICIARY_TYPES.map((type) => ({
+                value: type.value,
+                label: type.label,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">
@@ -237,22 +228,19 @@ export function UpcomingPaymentForm({
 
           <div className="space-y-2">
             <Label htmlFor="paymentStatus">Statut du paiement *</Label>
-            <Select
+            <SearchableSelect
+              id="paymentStatus"
               value={formData.status}
               onValueChange={(value) => handleChange("status", value)}
               disabled={loading}
-            >
-              <SelectTrigger id="paymentStatus">
-                <SelectValue placeholder="Selectionner un statut" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selectionner un statut"
+              searchPlaceholder="Rechercher un statut..."
+              emptyText="Aucun statut trouve."
+              options={PAYMENT_STATUSES.map((status) => ({
+                value: status.value,
+                label: status.label,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">

@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { COLLABORATOR_ROLE_OPTIONS } from "@/lib/content";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 interface CollaboratorFormProps {
   open: boolean;
@@ -138,22 +138,19 @@ export function CollaboratorForm({
 
             <div className="space-y-2">
               <Label htmlFor="collab-role">Role</Label>
-              <Select
+              <SearchableSelect
+                id="collab-role"
                 value={formData.role}
                 onValueChange={(value) => handleChange("role", value)}
                 disabled={loading}
-              >
-                <SelectTrigger id="collab-role">
-                  <SelectValue placeholder="Choisir un role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COLLABORATOR_ROLE_OPTIONS.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Choisir un role"
+                searchPlaceholder="Rechercher un role..."
+                emptyText="Aucun role trouve."
+                options={COLLABORATOR_ROLE_OPTIONS.map((role) => ({
+                  value: role.value,
+                  label: role.label,
+                }))}
+              />
             </div>
           </div>
 

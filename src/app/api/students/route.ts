@@ -85,11 +85,19 @@ export async function POST(request: NextRequest) {
       dateOfBirth,
       gender,
       paymentStatus,
+      totalAmountDue,
+      amountPaid,
       notes,
     } = body;
 
     if (paymentStatus && !PAYMENT_STATUSES.includes(paymentStatus)) {
       return NextResponse.json({ error: "Invalid payment status" }, { status: 400 });
+    }
+    if (totalAmountDue !== undefined && (!Number.isFinite(Number(totalAmountDue)) || Number(totalAmountDue) < 0)) {
+      return NextResponse.json({ error: "Invalid total amount due" }, { status: 400 });
+    }
+    if (amountPaid !== undefined && (!Number.isFinite(Number(amountPaid)) || Number(amountPaid) < 0)) {
+      return NextResponse.json({ error: "Invalid amount paid" }, { status: 400 });
     }
 
     const student = await prisma.student.create({
@@ -102,6 +110,8 @@ export async function POST(request: NextRequest) {
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender,
         paymentStatus: paymentStatus || "pending",
+        totalAmountDue: Math.round(Number(totalAmountDue || 0)),
+        amountPaid: Math.round(Number(amountPaid || 0)),
         notes,
         createdById: session.user.id,
       },

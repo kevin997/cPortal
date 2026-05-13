@@ -6,13 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/SearchableSelect";
 
 const CATEGORIES = [
   "Vente",
@@ -252,25 +246,19 @@ export function CashOperationForm({
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Catégorie *</Label>
-            <Select
+            <SearchableSelect
+              id="category"
               value={formData.category}
               onValueChange={(v) => handleChange("category", v)}
               disabled={loading}
-            >
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Sélectionner une catégorie" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-                <SelectItem value={CUSTOM_CATEGORY_VALUE}>
-                  Nouvelle categorie
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Sélectionner une catégorie"
+              searchPlaceholder="Rechercher une catégorie..."
+              emptyText="Aucune catégorie trouvée."
+              options={[
+                ...CATEGORIES.map((cat) => ({ value: cat, label: cat })),
+                { value: CUSTOM_CATEGORY_VALUE, label: "Nouvelle categorie" },
+              ]}
+            />
           </div>
 
           {formData.category === CUSTOM_CATEGORY_VALUE && (

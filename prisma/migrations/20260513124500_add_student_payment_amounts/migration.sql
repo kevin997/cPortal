@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `students`
+  ADD COLUMN `totalAmountDue` INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN `amountPaid` INTEGER NOT NULL DEFAULT 0;

@@ -33,6 +33,7 @@ model User {
   leads          Lead[] // Leads referred by this user
   cashOperations CashOperation[]
   upcomingPayments UpcomingPayment[]
+  cashForecasts  CashForecast[]
   cashSettings   CashSettings?
   createdUsers   User[]                  @relation("UserCreator")
   createdBy      User?                   @relation("UserCreator", fields: [createdById], references: [id])
@@ -95,6 +96,7 @@ model Student {
   address       String?
   dateOfBirth   DateTime?
   gender        String?
+  paymentStatus String    @default("pending") // paid, partially_paid, pending, overdue, cancelled
   notes         String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -187,7 +189,7 @@ model UpcomingPayment {
   beneficiaryType String   // vendor, investor, partner, other
   amount          Int
   dueDate         DateTime
-  status          String   @default("pending") // pending, paid, cancelled
+  status          String   @default("pending") // pending, paid, partially_paid, overdue, cancelled
   notes           String?  @db.Text
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -195,6 +197,23 @@ model UpcomingPayment {
   updatedAt       DateTime @updatedAt
 
   @@map("upcoming_payments")
+}
+
+// Cash Forecast Model (Caisse — previsions)
+model CashForecast {
+  id          String   @id @default(cuid())
+  department  String
+  quantity    Int
+  unitPrice   Int
+  total       Int
+  deadline    DateTime
+  report      String?  @db.Text
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cash_forecasts")
 }
 
 model CreativeRequest {

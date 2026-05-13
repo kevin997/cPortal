@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+const PAYMENT_STATUSES = ["paid", "partially_paid", "pending", "overdue", "cancelled"];
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -71,8 +73,13 @@ export async function PUT(
       address,
       dateOfBirth,
       gender,
+      paymentStatus,
       notes,
     } = body;
+
+    if (paymentStatus && !PAYMENT_STATUSES.includes(paymentStatus)) {
+      return NextResponse.json({ error: "Invalid payment status" }, { status: 400 });
+    }
 
     const student = await prisma.student.update({
       where: { id },
@@ -84,6 +91,7 @@ export async function PUT(
         address,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender,
+        paymentStatus: paymentStatus || "pending",
         notes,
       },
       include: {

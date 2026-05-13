@@ -18,14 +18,27 @@ import {
   CheckCircle2,
   XCircle,
   Landmark,
+  ClipboardList,
+  Search,
+  FileSpreadsheet,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CashOperationForm } from "@/components/CashOperationForm";
 import { UpcomingPaymentForm } from "@/components/UpcomingPaymentForm";
+import { CashForecastForm } from "@/components/CashForecastForm";
 import { toast } from "@/hooks/use-toast";
 
 interface CashOperation {
@@ -43,8 +56,21 @@ interface UpcomingPayment {
   beneficiaryType: "vendor" | "investor" | "partner" | "other";
   amount: number;
   dueDate: string;
-  status: "pending" | "paid" | "cancelled";
+  status: PaymentStatus;
   notes: string | null;
+}
+
+type PaymentStatus = "pending" | "paid" | "partially_paid" | "overdue" | "cancelled";
+type SheetRecordType = "operation" | "payment" | "forecast";
+
+interface CashForecast {
+  id: string;
+  department: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  deadline: string;
+  report: string | null;
 }
 
 interface CashSettings {
@@ -54,7 +80,20 @@ interface CashSettings {
   telegramChatId: string | null;
 }
 
-type Tab = "dashboard" | "upcoming" | "history" | "settings";
+type Tab = "dashboard" | "sheet" | "upcoming" | "forecasts" | "history" | "settings";
+
+interface SheetRecord {
+  id: string;
+  recordType: SheetRecordType;
+  kind: string;
+  label: string;
+  counterparty: string;
+  amount: number;
+  status: string;
+  date: string;
+  notes: string;
+  searchText: string;
+}
 
 function fmt(n: number) {
   return n.toLocaleString("fr-FR");
@@ -94,10 +133,29 @@ function getStatusBadgeVariant(status: UpcomingPayment["status"]) {
   switch (status) {
     case "paid":
       return "success" as const;
+    case "partially_paid":
+      return "default" as const;
     case "cancelled":
+      return "destructive" as const;
+    case "overdue":
       return "destructive" as const;
     default:
       return "warning" as const;
+  }
+}
+
+function getPaymentStatusLabel(status: PaymentStatus) {
+  switch (status) {
+    case "paid":
+      return "Paye";
+    case "partially_paid":
+      return "Partiellement paye";
+    case "overdue":
+      return "Retard";
+    case "cancelled":
+      return "Annule";
+    default:
+      return "En attente";
   }
 }
 
@@ -121,15 +179,19 @@ export default function CaissePage() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [operations, setOperations] = useState<CashOperation[]>([]);
   const [upcomingPayments, setUpcomingPayments] = useState<UpcomingPayment[]>([]);
+  const [forecasts, setForecasts] = useState<CashForecast[]>([]);
   const [settings, setSettings] = useState<CashSettings | null>(null);
   const [loadingOps, setLoadingOps] = useState(true);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [loadingForecasts, setLoadingForecasts] = useState(true);
   const [sendingReport, setSendingReport] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [upcomingFormOpen, setUpcomingFormOpen] = useState(false);
+  const [forecastFormOpen, setForecastFormOpen] = useState(false);
   const [defaultType, setDefaultType] = useState<"in" | "out">("in");
   const [editingOperation, setEditingOperation] = useState<CashOperation | null>(null);
   const [editingPayment, setEditingPayment] = useState<UpcomingPayment | null>(null);
+  const [editingForecast, setEditingForecast] = useState<CashForecast | null>(null);
 
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const monthStartStr = () => {
@@ -143,7 +205,9 @@ export default function CaissePage() {
   const [historyTo, setHistoryTo] = useState("");
   const [historyType, setHistoryType] = useState<"all" | "in" | "out">("all");
 
-  const [upcomingStatus, setUpcomingStatus] = useState<"all" | "pending" | "paid" | "cancelled">("all");
+  const [upcomingStatus, setUpcomingStatus] = useState<"all" | PaymentStatus>("all");
+  const [sheetSearch, setSheetSearch] = useState("");
+  const [sheetType, setSheetType] = useState<"all" | SheetRecordType>("all");
 
   const [annualTarget, setAnnualTarget] = useState("");
   const [monthlyTarget, setMonthlyTarget] = useState("");
@@ -176,6 +240,19 @@ export default function CaissePage() {
     }
   };
 
+  const fetchForecasts = async () => {
+    try {
+      const res = await fetch("/api/caisse/forecasts");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setForecasts(data);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger les previsions", variant: "destructive" });
+    } finally {
+      setLoadingForecasts(false);
+    }
+  };
+
   const fetchSettings = async () => {
     try {
       const res = await fetch("/api/caisse/settings");
@@ -194,6 +271,7 @@ export default function CaissePage() {
   useEffect(() => {
     fetchOperations();
     fetchUpcomingPayments();
+    fetchForecasts();
     fetchSettings();
   }, []);
 
@@ -236,6 +314,18 @@ export default function CaissePage() {
     }
   };
 
+  const handleDeleteForecast = async (id: string) => {
+    if (!confirm("Supprimer cette prevision ?")) return;
+    try {
+      const res = await fetch(`/api/caisse/forecasts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      toast({ title: "Prevision supprimee", variant: "success" });
+      setForecasts((prev) => prev.filter((forecast) => forecast.id !== id));
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de supprimer", variant: "destructive" });
+    }
+  };
+
   const handlePaymentStatus = async (
     id: string,
     status: UpcomingPayment["status"]
@@ -255,6 +345,10 @@ export default function CaissePage() {
         title:
           status === "paid"
             ? "Paiement marque comme paye"
+            : status === "partially_paid"
+              ? "Paiement marque comme partiel"
+              : status === "overdue"
+                ? "Paiement marque en retard"
             : status === "cancelled"
               ? "Paiement annule"
               : "Paiement reactive",
@@ -290,8 +384,9 @@ export default function CaissePage() {
         .filter((op) => op.type === "out" && new Date(op.date) >= from && new Date(op.date) <= to)
         .reduce((s, op) => s + op.amount, 0);
       const pendingTotal = upcomingPayments
-        .filter((payment) => payment.status === "pending")
+        .filter((payment) => payment.status === "pending" || payment.status === "overdue")
         .reduce((sum, payment) => sum + payment.amount, 0);
+      const forecastTotal = forecasts.reduce((sum, forecast) => sum + forecast.total, 0);
       const rate = settings.monthlyTarget ? ((periodIn / settings.monthlyTarget) * 100).toFixed(1) : "0";
 
       const message =
@@ -303,6 +398,7 @@ export default function CaissePage() {
         `• Sorties (periode) : ${fmt(periodOut)} FCFA\n` +
         `• Solde net (periode) : ${fmt(periodIn - periodOut)} FCFA\n` +
         `• Paiements a venir : ${fmt(pendingTotal)} FCFA\n` +
+        `• Previsions : ${fmt(forecastTotal)} FCFA\n` +
         `• Taux de realisation : ${rate}%`;
 
       const res = await fetch("/api/caisse/report", {
@@ -336,12 +432,13 @@ export default function CaissePage() {
       .reduce((s, op) => s + op.amount, 0);
     const rate = settings?.monthlyTarget ? (monthIn / settings.monthlyTarget) * 100 : 0;
 
-    const pendingPayments = upcomingPayments.filter((payment) => payment.status === "pending");
+    const pendingPayments = upcomingPayments.filter((payment) => payment.status === "pending" || payment.status === "overdue");
     const pendingTotal = pendingPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const dueSoonCount = pendingPayments.filter((payment) => getDayDiff(payment.dueDate) <= 7).length;
+    const forecastTotal = forecasts.reduce((sum, forecast) => sum + forecast.total, 0);
 
-    return { yearIn, monthIn, rate, pendingTotal, dueSoonCount };
-  }, [operations, upcomingPayments, settings]);
+    return { yearIn, monthIn, rate, pendingTotal, dueSoonCount, forecastTotal };
+  }, [operations, upcomingPayments, forecasts, settings]);
 
   const filteredOps = useMemo(() => {
     return operations.filter((op) => {
@@ -370,6 +467,117 @@ export default function CaissePage() {
     });
   }, [upcomingPayments, upcomingStatus]);
 
+  const sheetRecords = useMemo<SheetRecord[]>(() => {
+    const operationRecords = operations.map((op) => {
+      const kind = op.type === "in" ? "Entrée" : "Sortie";
+      const amount = op.type === "in" ? op.amount : -op.amount;
+      const record: SheetRecord = {
+        id: op.id,
+        recordType: "operation",
+        kind,
+        label: op.category,
+        counterparty: "-",
+        amount,
+        status: "Enregistré",
+        date: op.date,
+        notes: op.description || "",
+        searchText: "",
+      };
+      record.searchText = [
+        "operation",
+        kind,
+        op.category,
+        op.description,
+        fmt(op.amount),
+        fmtDate(op.date),
+      ].join(" ").toLowerCase();
+      return record;
+    });
+
+    const paymentRecords = upcomingPayments.map((payment) => {
+      const status = getPaymentStatusLabel(payment.status);
+      const record: SheetRecord = {
+        id: payment.id,
+        recordType: "payment",
+        kind: "Paiement",
+        label: payment.beneficiaryName,
+        counterparty: getBeneficiaryTypeLabel(payment.beneficiaryType),
+        amount: payment.amount,
+        status,
+        date: payment.dueDate,
+        notes: payment.notes || "",
+        searchText: "",
+      };
+      record.searchText = [
+        "paiement",
+        payment.beneficiaryName,
+        getBeneficiaryTypeLabel(payment.beneficiaryType),
+        status,
+        payment.notes,
+        fmt(payment.amount),
+        fmtDateOnly(payment.dueDate),
+        getDueLabel(payment.dueDate),
+      ].join(" ").toLowerCase();
+      return record;
+    });
+
+    const forecastRecords = forecasts.map((forecast) => {
+      const record: SheetRecord = {
+        id: forecast.id,
+        recordType: "forecast",
+        kind: "Prévision",
+        label: forecast.department,
+        counterparty: `Qté ${forecast.quantity}`,
+        amount: forecast.total,
+        status: "Prévu",
+        date: forecast.deadline,
+        notes: forecast.report || "",
+        searchText: "",
+      };
+      record.searchText = [
+        "prevision",
+        "prévision",
+        forecast.department,
+        forecast.quantity,
+        forecast.unitPrice,
+        forecast.total,
+        forecast.report,
+        fmtDateOnly(forecast.deadline),
+        getDueLabel(forecast.deadline),
+      ].join(" ").toLowerCase();
+      return record;
+    });
+
+    return [...paymentRecords, ...operationRecords, ...forecastRecords].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [operations, upcomingPayments, forecasts]);
+
+  const filteredSheetRecords = useMemo(() => {
+    const query = sheetSearch.trim().toLowerCase();
+    return sheetRecords.filter((record) => {
+      if (sheetType !== "all" && record.recordType !== sheetType) return false;
+      if (query && !record.searchText.includes(query)) return false;
+      return true;
+    });
+  }, [sheetRecords, sheetSearch, sheetType]);
+
+  const sheetTotals = useMemo(() => {
+    const income = filteredSheetRecords
+      .filter((record) => record.recordType === "operation" && record.amount > 0)
+      .reduce((sum, record) => sum + record.amount, 0);
+    const expenses = filteredSheetRecords
+      .filter((record) => record.recordType === "operation" && record.amount < 0)
+      .reduce((sum, record) => sum + Math.abs(record.amount), 0);
+    const payments = filteredSheetRecords
+      .filter((record) => record.recordType === "payment")
+      .reduce((sum, record) => sum + record.amount, 0);
+    const forecastTotal = filteredSheetRecords
+      .filter((record) => record.recordType === "forecast")
+      .reduce((sum, record) => sum + record.amount, 0);
+    return { income, expenses, payments, forecastTotal };
+  }, [filteredSheetRecords]);
+
   const openForm = (type: "in" | "out") => {
     setEditingOperation(null);
     setDefaultType(type);
@@ -392,6 +600,70 @@ export default function CaissePage() {
     setUpcomingFormOpen(true);
   };
 
+  const openEditForecast = (forecast: CashForecast) => {
+    setEditingForecast(forecast);
+    setForecastFormOpen(true);
+  };
+
+  const openNewForecast = () => {
+    setEditingForecast(null);
+    setForecastFormOpen(true);
+  };
+
+  const handleSheetRowEdit = (record: SheetRecord) => {
+    if (record.recordType === "payment") {
+      const payment = upcomingPayments.find((item) => item.id === record.id);
+      if (payment) openEditPayment(payment);
+      return;
+    }
+    if (record.recordType === "forecast") {
+      const forecast = forecasts.find((item) => item.id === record.id);
+      if (forecast) openEditForecast(forecast);
+      return;
+    }
+    const operation = operations.find((item) => item.id === record.id);
+    if (operation) openEditOperation(operation);
+  };
+
+  const handleSheetRowDelete = (record: SheetRecord) => {
+    if (record.recordType === "payment") {
+      handleDeleteUpcomingPayment(record.id);
+      return;
+    }
+    if (record.recordType === "forecast") {
+      handleDeleteForecast(record.id);
+      return;
+    }
+    handleDelete(record.id);
+  };
+
+  const handleExportSheet = () => {
+    const headers = ["Type", "Libelle", "Tiers", "Statut", "Date", "Montant", "Notes"];
+    const rows = filteredSheetRecords.map((record) => [
+      record.kind,
+      record.label,
+      record.counterparty,
+      record.status,
+      fmtDateOnly(record.date),
+      String(record.amount),
+      record.notes,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `caisse-tableur-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 py-6">
       <div className="flex items-center justify-between gap-4">
@@ -405,6 +677,10 @@ export default function CaissePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={openNewForecast}>
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">Prevision</span>
+          </Button>
           <Button size="sm" variant="outline" onClick={openNewPayment}>
             <CalendarClock className="h-4 w-4" />
             <span className="hidden sm:inline">Paiement a venir</span>
@@ -421,16 +697,20 @@ export default function CaissePage() {
       </div>
 
       <div className="flex border-b">
-        {(["dashboard", "upcoming", "history", "settings"] as Tab[]).map((t) => {
+        {(["dashboard", "sheet", "upcoming", "forecasts", "history", "settings"] as Tab[]).map((t) => {
           const icons = {
             dashboard: LayoutDashboard,
+            sheet: FileSpreadsheet,
             upcoming: CalendarClock,
+            forecasts: ClipboardList,
             history: History,
             settings: SettingsIcon,
           };
           const labels = {
             dashboard: "Dashboard",
+            sheet: "Tableur",
             upcoming: "Paiements",
+            forecasts: "Previsions",
             history: "Historique",
             settings: "Parametres",
           };
@@ -451,9 +731,187 @@ export default function CaissePage() {
         })}
       </div>
 
+      {tab === "sheet" && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="space-y-4 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="grid flex-1 gap-3 md:grid-cols-[minmax(220px,1fr)_180px]">
+                  <div className="space-y-1">
+                    <Label htmlFor="sheetSearch" className="text-xs text-muted-foreground">
+                      Recherche
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="sheetSearch"
+                        value={sheetSearch}
+                        onChange={(e) => setSheetSearch(e.target.value)}
+                        placeholder="Rechercher bénéficiaire, catégorie, statut, montant..."
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Type</Label>
+                    <div className="grid grid-cols-4 overflow-hidden rounded-md border">
+                      {(["all", "payment", "operation", "forecast"] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setSheetType(type)}
+                          className={`px-2 py-2 text-xs font-medium transition-colors ${sheetType === type
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-accent"
+                            }`}
+                        >
+                          {type === "all"
+                            ? "Tout"
+                            : type === "payment"
+                              ? "Pay."
+                              : type === "operation"
+                                ? "Ops"
+                                : "Prév."}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(sheetSearch || sheetType !== "all") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSheetSearch("");
+                        setSheetType("all");
+                      }}
+                    >
+                      Réinitialiser
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportSheet}
+                    disabled={filteredSheetRecords.length === 0}
+                  >
+                    <Download className="h-4 w-4" />
+                    CSV
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-2 text-center text-sm sm:grid-cols-4">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-xs text-muted-foreground">Entrées</p>
+                  <p className="font-bold text-emerald-700">{fmt(sheetTotals.income)} FCFA</p>
+                </div>
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                  <p className="text-xs text-muted-foreground">Sorties</p>
+                  <p className="font-bold text-rose-700">{fmt(sheetTotals.expenses)} FCFA</p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs text-muted-foreground">Paiements</p>
+                  <p className="font-bold text-amber-700">{fmt(sheetTotals.payments)} FCFA</p>
+                </div>
+                <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
+                  <p className="text-xs text-muted-foreground">Prévisions</p>
+                  <p className="font-bold text-sky-700">{fmt(sheetTotals.forecastTotal)} FCFA</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {filteredSheetRecords.length} résultat{filteredSheetRecords.length !== 1 ? "s" : ""}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+                  <TableRow>
+                    <TableHead className="w-28">Type</TableHead>
+                    <TableHead>Libellé</TableHead>
+                    <TableHead>Tiers</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Montant</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead className="w-24 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSheetRecords.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        Aucun résultat pour ces filtres.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSheetRecords.map((record) => (
+                      <TableRow key={`${record.recordType}-${record.id}`} className="h-12">
+                        <TableCell>
+                          <Badge
+                            variant={
+                              record.recordType === "payment"
+                                ? "warning"
+                                : record.recordType === "forecast"
+                                  ? "default"
+                                  : record.amount >= 0
+                                    ? "success"
+                                    : "destructive"
+                            }
+                          >
+                            {record.kind}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{record.label}</TableCell>
+                        <TableCell className="text-muted-foreground">{record.counterparty}</TableCell>
+                        <TableCell>{record.status}</TableCell>
+                        <TableCell>{fmtDateOnly(record.date)}</TableCell>
+                        <TableCell
+                          className={`text-right font-semibold ${record.amount < 0 ? "text-rose-600" : record.recordType === "operation" ? "text-emerald-700" : ""
+                            }`}
+                        >
+                          {record.amount < 0 ? "-" : ""}
+                          {fmt(Math.abs(record.amount))} FCFA
+                        </TableCell>
+                        <TableCell className="max-w-[260px] truncate text-muted-foreground">
+                          {record.notes || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button size="icon-sm" variant="ghost" onClick={() => handleSheetRowEdit(record)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              onClick={() => handleSheetRowDelete(record)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {tab === "dashboard" && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="overflow-hidden bg-primary text-primary-foreground">
               <CardContent className="p-6">
                 <p className="mb-1 text-xs uppercase tracking-wider opacity-70">CA Mensuel</p>
@@ -508,9 +966,26 @@ export default function CaissePage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="flex items-center justify-between p-6">
+                <div>
+                  <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">Previsions</p>
+                  <p className="text-2xl font-bold">
+                    {fmt(stats.forecastTotal)} <span className="text-sm font-normal text-muted-foreground">FCFA</span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {forecasts.length} ligne{forecasts.length !== 1 ? "s" : ""} planifiee{forecasts.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                  <ClipboardList className="h-6 w-6" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <button
               onClick={() => openForm("in")}
               className="flex flex-col items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-5 font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
@@ -531,6 +1006,13 @@ export default function CaissePage() {
             >
               <CalendarClock className="h-8 w-8" />
               Paiement a venir
+            </button>
+            <button
+              onClick={openNewForecast}
+              className="flex flex-col items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 p-5 font-semibold text-sky-700 transition-colors hover:bg-sky-100"
+            >
+              <ClipboardList className="h-8 w-8" />
+              Prevision
             </button>
           </div>
 
@@ -668,7 +1150,7 @@ export default function CaissePage() {
                           <div className="text-right">
                             <p className="text-sm font-bold text-amber-700">{fmt(payment.amount)} FCFA</p>
                             <Badge variant={getStatusBadgeVariant(payment.status)}>
-                              {payment.status === "pending" ? "En attente" : payment.status === "paid" ? "Paye" : "Annule"}
+                              {getPaymentStatusLabel(payment.status)}
                             </Badge>
                           </div>
                         </div>
@@ -685,16 +1167,20 @@ export default function CaissePage() {
       {tab === "upcoming" && (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {(["all", "pending", "paid", "cancelled"] as const).map((status) => (
+            {(["all", "pending", "partially_paid", "overdue", "paid", "cancelled"] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setUpcomingStatus(status)}
                 className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${upcomingStatus === status
                     ? status === "pending"
                       ? "border-amber-500 bg-amber-500 text-white"
+                      : status === "partially_paid"
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : status === "overdue"
+                          ? "border-red-700 bg-red-700 text-white"
                       : status === "paid"
                         ? "border-emerald-600 bg-emerald-600 text-white"
-                        : status === "cancelled"
+                      : status === "cancelled"
                           ? "border-rose-600 bg-rose-600 text-white"
                           : "border-primary bg-primary text-primary-foreground"
                     : "border-border text-muted-foreground hover:bg-accent"
@@ -702,21 +1188,23 @@ export default function CaissePage() {
               >
                 {status === "all"
                   ? "Tout"
-                  : status === "pending"
-                    ? "En attente"
-                    : status === "paid"
-                      ? "Payes"
-                      : "Annules"}
+                  : getPaymentStatusLabel(status)}
               </button>
             ))}
           </div>
 
           {!loadingPayments && filteredUpcomingPayments.length > 0 && (
-            <div className="grid gap-2 text-center text-sm sm:grid-cols-3">
+            <div className="grid gap-2 text-center text-sm sm:grid-cols-4">
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                 <p className="text-xs text-muted-foreground">En attente</p>
                 <p className="font-bold text-amber-700">
                   {fmt(filteredUpcomingPayments.filter((payment) => payment.status === "pending").reduce((sum, payment) => sum + payment.amount, 0))}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs text-muted-foreground">Partiels</p>
+                <p className="font-bold text-blue-700">
+                  {fmt(filteredUpcomingPayments.filter((payment) => payment.status === "partially_paid").reduce((sum, payment) => sum + payment.amount, 0))}
                 </p>
               </div>
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -764,7 +1252,7 @@ export default function CaissePage() {
                         <p className="text-sm font-medium">{payment.beneficiaryName}</p>
                         <Badge variant="outline">{getBeneficiaryTypeLabel(payment.beneficiaryType)}</Badge>
                         <Badge variant={getStatusBadgeVariant(payment.status)}>
-                          {payment.status === "pending" ? "En attente" : payment.status === "paid" ? "Paye" : "Annule"}
+                          {getPaymentStatusLabel(payment.status)}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -782,6 +1270,16 @@ export default function CaissePage() {
                       <Button size="sm" variant="outline" onClick={() => handlePaymentStatus(payment.id, "paid")}>
                         <CheckCircle2 className="h-4 w-4" />
                         Marquer paye
+                      </Button>
+                    )}
+                    {payment.status !== "partially_paid" && (
+                      <Button size="sm" variant="outline" onClick={() => handlePaymentStatus(payment.id, "partially_paid")}>
+                        Partiel
+                      </Button>
+                    )}
+                    {payment.status !== "overdue" && (
+                      <Button size="sm" variant="outline" onClick={() => handlePaymentStatus(payment.id, "overdue")}>
+                        Retard
                       </Button>
                     )}
                     {payment.status !== "cancelled" && (
@@ -816,6 +1314,102 @@ export default function CaissePage() {
                 </CardContent>
               </Card>
             ))
+          )}
+        </div>
+      )}
+
+      {tab === "forecasts" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">Gestion des previsions</h3>
+              <p className="text-xs text-muted-foreground">
+                Departement, qte, prix unitaire, total, delais et reports.
+              </p>
+            </div>
+            <Button size="sm" onClick={openNewForecast}>
+              <ClipboardList className="h-4 w-4" />
+              Ajouter
+            </Button>
+          </div>
+
+          {!loadingForecasts && forecasts.length > 0 && (
+            <div className="grid gap-2 text-center text-sm sm:grid-cols-3">
+              <div className="rounded-lg border bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Total previsionnel</p>
+                <p className="font-bold">{fmt(forecasts.reduce((sum, forecast) => sum + forecast.total, 0))} FCFA</p>
+              </div>
+              <div className="rounded-lg border bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Departements</p>
+                <p className="font-bold">{new Set(forecasts.map((forecast) => forecast.department)).size}</p>
+              </div>
+              <div className="rounded-lg border bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Lignes</p>
+                <p className="font-bold">{forecasts.length}</p>
+              </div>
+            </div>
+          )}
+
+          {loadingForecasts ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="h-24 p-4" />
+                </Card>
+              ))}
+            </div>
+          ) : forecasts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Aucune prevision enregistree.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {forecasts.map((forecast) => (
+                <Card key={forecast.id} className="group">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium">{forecast.department}</p>
+                          <Badge variant="outline">Qte {forecast.quantity}</Badge>
+                          <Badge variant="outline">{fmt(forecast.unitPrice)} FCFA / unite</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Delai le {fmtDateOnly(forecast.deadline)} - {getDueLabel(forecast.deadline)}
+                        </p>
+                        {forecast.report && (
+                          <p className="mt-1 max-w-xl text-xs text-muted-foreground">{forecast.report}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-base font-bold text-sky-700">{fmt(forecast.total)} FCFA</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => openEditForecast(forecast)}
+                        className="hover:text-primary"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteForecast(forecast.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -1053,6 +1647,16 @@ export default function CaissePage() {
         }}
         editData={editingPayment}
         onSuccess={fetchUpcomingPayments}
+      />
+
+      <CashForecastForm
+        open={forecastFormOpen}
+        onOpenChange={(open) => {
+          setForecastFormOpen(open);
+          if (!open) setEditingForecast(null);
+        }}
+        editData={editingForecast}
+        onSuccess={fetchForecasts}
       />
     </div>
   );

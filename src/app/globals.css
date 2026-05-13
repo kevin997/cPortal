@@ -150,6 +150,21 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  html.notranslate,
+  body.notranslate {
+    translate: no;
+  }
+
+  .skiptranslate,
+  .goog-te-banner-frame,
+  iframe.skiptranslate {
+    display: none !important;
+  }
+
+  body {
+    top: 0 !important;
+  }
 }
 
 /* Mobile-first responsive utilities */

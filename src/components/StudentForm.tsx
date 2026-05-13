@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
+const PAYMENT_STATUSES = [
+  { value: "paid", label: "Paye" },
+  { value: "partially_paid", label: "Partiellement paye" },
+  { value: "pending", label: "En attente" },
+  { value: "overdue", label: "Retard" },
+  { value: "cancelled", label: "Annule" },
+] as const;
+
 interface StudentFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,6 +41,7 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
     address: student?.address || "",
     dateOfBirth: student?.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : "",
     gender: student?.gender || "none",
+    paymentStatus: student?.paymentStatus || "pending",
     notes: student?.notes || "",
   });
 
@@ -78,6 +87,7 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
           address: "",
           dateOfBirth: "",
           gender: "none",
+          paymentStatus: "pending",
           notes: "",
         });
       }
@@ -116,6 +126,26 @@ export function StudentForm({ open, onOpenChange, student, onSuccess }: StudentF
               disabled={loading}
               placeholder="John Doe"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="paymentStatus">Payment Status</Label>
+            <Select
+              value={formData.paymentStatus}
+              onValueChange={(value) => handleChange("paymentStatus", value)}
+              disabled={loading}
+            >
+              <SelectTrigger id="paymentStatus">
+                <SelectValue placeholder="Select payment status" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

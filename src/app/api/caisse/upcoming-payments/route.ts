@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasCaisseAccess } from "@/lib/access";
 
+const PAYMENT_STATUSES = ["pending", "paid", "partially_paid", "overdue", "cancelled"];
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { beneficiaryName, beneficiaryType, amount, dueDate, notes } = body;
+    const { beneficiaryName, beneficiaryType, amount, dueDate, status, notes } = body;
 
     if (!beneficiaryName?.trim()) {
       return NextResponse.json({ error: "Beneficiary name is required" }, { status: 400 });
@@ -53,6 +55,9 @@ export async function POST(request: NextRequest) {
     if (!dueDate) {
       return NextResponse.json({ error: "Due date is required" }, { status: 400 });
     }
+    if (status && !PAYMENT_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
 
     const payment = await prisma.upcomingPayment.create({
       data: {
@@ -60,6 +65,7 @@ export async function POST(request: NextRequest) {
         beneficiaryType,
         amount: Math.round(Number(amount)),
         dueDate: new Date(dueDate),
+        status: status || "pending",
         notes: notes || null,
         userId: session.user.id,
       },

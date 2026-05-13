@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasCaisseAccess } from "@/lib/access";
 
+const PAYMENT_STATUSES = ["pending", "paid", "partially_paid", "overdue", "cancelled"];
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,7 +31,7 @@ export async function PUT(
     const data: Record<string, unknown> = {};
 
     if (status) {
-      if (!["pending", "paid", "cancelled"].includes(status)) {
+      if (!PAYMENT_STATUSES.includes(status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
       data.status = status;

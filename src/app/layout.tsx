@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "cPortal - Programme d'Affiliation",
   description: "Gagnez de l'argent en partageant nos formations - Programme de parrainage cPortal",
   manifest: "/manifest.json",
+  other: {
+    google: "notranslate",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -45,10 +48,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr" translate="no" className="notranslate">
       <Amplitude />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        translate="no"
+        className={`${geistSans.variable} ${geistMono.variable} notranslate antialiased`}
       >
         <SessionProvider>
           <ErrorBoundary>{children}</ErrorBoundary>

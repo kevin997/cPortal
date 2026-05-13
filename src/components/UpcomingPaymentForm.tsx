@@ -29,12 +29,23 @@ const BENEFICIARY_TYPES = [
   { value: "other", label: "Autre" },
 ] as const;
 
+const PAYMENT_STATUSES = [
+  { value: "paid", label: "Paye" },
+  { value: "partially_paid", label: "Partiellement paye" },
+  { value: "pending", label: "En attente" },
+  { value: "overdue", label: "Retard" },
+  { value: "cancelled", label: "Annule" },
+] as const;
+
+type PaymentStatus = (typeof PAYMENT_STATUSES)[number]["value"];
+
 interface UpcomingPaymentEditData {
   id: string;
   beneficiaryName: string;
   beneficiaryType: "vendor" | "investor" | "partner" | "other";
   amount: number;
   dueDate: string;
+  status: PaymentStatus;
   notes: string | null;
 }
 
@@ -58,6 +69,7 @@ function getInitialFormData() {
     beneficiaryType: "",
     amount: "",
     dueDate: nextWeekDate(),
+    status: "pending" as PaymentStatus,
     notes: "",
   };
 }
@@ -85,6 +97,7 @@ export function UpcomingPaymentForm({
         beneficiaryType: editData.beneficiaryType,
         amount: String(editData.amount),
         dueDate: toDateInput(editData.dueDate),
+        status: editData.status,
         notes: editData.notes ?? "",
       });
     } else {
@@ -106,6 +119,7 @@ export function UpcomingPaymentForm({
         beneficiaryType: formData.beneficiaryType,
         amount: Number(formData.amount),
         dueDate: new Date(formData.dueDate).toISOString(),
+        status: formData.status,
         notes: formData.notes.trim() || null,
       };
 
@@ -219,6 +233,26 @@ export function UpcomingPaymentForm({
               required
               disabled={loading}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="paymentStatus">Statut du paiement *</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => handleChange("status", value)}
+              disabled={loading}
+            >
+              <SelectTrigger id="paymentStatus">
+                <SelectValue placeholder="Selectionner un statut" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

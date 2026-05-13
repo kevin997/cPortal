@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+const PAYMENT_STATUSES = ["paid", "partially_paid", "pending", "overdue", "cancelled"];
+const PAYMENT_STATUS_SEARCH: Record<string, string> = {
+  paye: "paid",
+  payé: "paid",
+  partiel: "partially_paid",
+  partiellement: "partially_paid",
+  attente: "pending",
+  pending: "pending",
+  retard: "overdue",
+  overdue: "overdue",
+  annule: "cancelled",
+  annulé: "cancelled",
+  cancelled: "cancelled",
+};
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -11,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
+    const paymentStatus = PAYMENT_STATUS_SEARCH[search.toLowerCase()];
 
     const students = await prisma.student.findMany({
       where: search
@@ -19,6 +35,7 @@ export async function GET(request: NextRequest) {
               { fullName: { contains: search } },
               { email: { contains: search } },
               { phoneNumber: { contains: search } },
+              ...(paymentStatus ? [{ paymentStatus }] : []),
             ],
           }
         : undefined,
@@ -67,8 +84,13 @@ export async function POST(request: NextRequest) {
       address,
       dateOfBirth,
       gender,
+      paymentStatus,
       notes,
     } = body;
+
+    if (paymentStatus && !PAYMENT_STATUSES.includes(paymentStatus)) {
+      return NextResponse.json({ error: "Invalid payment status" }, { status: 400 });
+    }
 
     const student = await prisma.student.create({
       data: {
@@ -79,6 +101,7 @@ export async function POST(request: NextRequest) {
         address,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender,
+        paymentStatus: paymentStatus || "pending",
         notes,
         createdById: session.user.id,
       },

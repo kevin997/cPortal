@@ -19,12 +19,29 @@ interface Student {
   address?: string;
   dateOfBirth?: string;
   gender?: string;
+  paymentStatus: "paid" | "partially_paid" | "pending" | "overdue" | "cancelled";
   notes?: string;
   createdAt: string;
   _count?: {
     enrollments: number;
   };
 }
+
+const paymentStatusLabels: Record<Student["paymentStatus"], string> = {
+  paid: "Paye",
+  partially_paid: "Partiellement paye",
+  pending: "En attente",
+  overdue: "Retard",
+  cancelled: "Annule",
+};
+
+const paymentStatusColors: Record<Student["paymentStatus"], "default" | "secondary" | "success" | "warning" | "destructive"> = {
+  paid: "success",
+  partially_paid: "default",
+  pending: "warning",
+  overdue: "destructive",
+  cancelled: "destructive",
+};
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -191,8 +208,18 @@ export default function StudentsPage() {
                     </div>
                   </div>
                   {student._count && student._count.enrollments > 0 && (
-                    <Badge variant="secondary" className="w-fit">
-                      {student._count.enrollments} enrollment{student._count.enrollments !== 1 ? "s" : ""}
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary" className="w-fit">
+                        {student._count.enrollments} enrollment{student._count.enrollments !== 1 ? "s" : ""}
+                      </Badge>
+                      <Badge variant={paymentStatusColors[student.paymentStatus] || "warning"} className="w-fit">
+                        {paymentStatusLabels[student.paymentStatus] || "En attente"}
+                      </Badge>
+                    </div>
+                  )}
+                  {(!student._count || student._count.enrollments === 0) && (
+                    <Badge variant={paymentStatusColors[student.paymentStatus] || "warning"} className="w-fit">
+                      {paymentStatusLabels[student.paymentStatus] || "En attente"}
                     </Badge>
                   )}
                 </CardHeader>

@@ -28,8 +28,20 @@ const CATEGORIES = [
   "Salaire",
   "Loyer",
   "Transport",
+  "Internet",
+  "Courant",
+  "Marketing digital et E-commerce",
+  "Publicite",
+  "Impressions",
+  "Materiel",
+  "Fournitures",
+  "Maintenance",
+  "Communication",
+  "Taxes et impots",
   "Autre",
 ];
+
+const CUSTOM_CATEGORY_VALUE = "__custom__";
 
 interface CashOperationEditData {
   id: string;
@@ -72,6 +84,7 @@ export function CashOperationForm({
     type: defaultType,
     amount: "",
     category: "",
+    customCategory: "",
     description: "",
     date: nowDatetimeLocal(),
   });
@@ -84,7 +97,8 @@ export function CashOperationForm({
       setFormData({
         type: editData.type,
         amount: String(editData.amount),
-        category: editData.category,
+        category: CATEGORIES.includes(editData.category) ? editData.category : CUSTOM_CATEGORY_VALUE,
+        customCategory: CATEGORIES.includes(editData.category) ? "" : editData.category,
         description: editData.description ?? "",
         date: toDatetimeLocal(editData.date),
       });
@@ -93,6 +107,7 @@ export function CashOperationForm({
         type: defaultType,
         amount: "",
         category: "",
+        customCategory: "",
         description: "",
         date: nowDatetimeLocal(),
       });
@@ -111,10 +126,14 @@ export function CashOperationForm({
     setLoading(true);
 
     try {
+      const category =
+        formData.category === CUSTOM_CATEGORY_VALUE
+          ? formData.customCategory.trim()
+          : formData.category;
       const payload = {
         type: effectiveType,
         amount: Number(formData.amount),
-        category: formData.category,
+        category,
         description: formData.description || null,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
       };
@@ -141,7 +160,7 @@ export function CashOperationForm({
           : effectiveType === "in"
             ? "Entrée enregistrée"
             : "Sortie enregistrée",
-        description: `${Number(formData.amount).toLocaleString("fr-FR")} FCFA — ${formData.category}`,
+        description: `${Number(formData.amount).toLocaleString("fr-FR")} FCFA - ${category}`,
         variant: "success",
       });
 
@@ -152,6 +171,7 @@ export function CashOperationForm({
         type: defaultType,
         amount: "",
         category: "",
+        customCategory: "",
         description: "",
         date: nowDatetimeLocal(),
       });
@@ -246,9 +266,26 @@ export function CashOperationForm({
                     {cat}
                   </SelectItem>
                 ))}
+                <SelectItem value={CUSTOM_CATEGORY_VALUE}>
+                  Nouvelle categorie
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {formData.category === CUSTOM_CATEGORY_VALUE && (
+            <div className="space-y-2">
+              <Label htmlFor="customCategory">Nom de la categorie *</Label>
+              <Input
+                id="customCategory"
+                value={formData.customCategory}
+                onChange={(e) => handleChange("customCategory", e.target.value)}
+                placeholder="Ex. Equipements, Assurance..."
+                required
+                disabled={loading}
+              />
+            </div>
+          )}
 
           {/* Date */}
           <div className="space-y-2">
@@ -286,7 +323,12 @@ export function CashOperationForm({
             </Button>
             <Button
               type="submit"
-              disabled={loading || !formData.amount || !formData.category}
+              disabled={
+                loading ||
+                !formData.amount ||
+                !formData.category ||
+                (formData.category === CUSTOM_CATEGORY_VALUE && !formData.customCategory.trim())
+              }
               className={
                 isIn
                   ? "bg-emerald-600 hover:bg-emerald-700"

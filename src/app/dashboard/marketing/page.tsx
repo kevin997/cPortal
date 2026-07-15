@@ -241,7 +241,7 @@ export default function MarketingDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {(summary?.totals.conversion_rate ?? 0).toFixed(1)}%
+              {((summary?.totals.conversion_rate ?? 0) * 100).toFixed(1)}%
             </div>
           </CardContent>
         </Card>

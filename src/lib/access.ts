@@ -40,3 +40,12 @@ export function canEditSocialMediaPlans(role?: string | null) {
 export function canSelectSocialMediaPlansForRequests(role?: string | null) {
   return role === "admin" || role === "sales_manager";
 }
+
+export function hasMarketingAccess(role?: string | null) {
+  return (
+    isAdminRole(role) ||
+    role === "sales_manager" ||
+    role === "sales_rep" ||
+    role === "sales_agent"
+  );
+}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { canManageCollaborators, hasCaisseAccess } from "@/lib/access";
+import { canManageCollaborators, hasCaisseAccess, hasMarketingAccess } from "@/lib/access";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,6 +24,13 @@ export async function proxy(request: NextRequest) {
     if (
       pathname.startsWith("/dashboard/collaborators") &&
       !canManageCollaborators(session.user.role)
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/creation-contenu", request.url));
+    }
+
+    if (
+      pathname.startsWith("/dashboard/marketing") &&
+      !hasMarketingAccess(session.user.role)
     ) {
       return NextResponse.redirect(new URL("/dashboard/creation-contenu", request.url));
     }

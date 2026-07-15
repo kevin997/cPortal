@@ -19,9 +19,15 @@ import {
   Palette,
   UserCog,
   CalendarDays,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { canManageCollaborators, hasCaisseAccess, hasContentCreationAccess } from "@/lib/access";
+import {
+  canManageCollaborators,
+  hasCaisseAccess,
+  hasContentCreationAccess,
+  hasMarketingAccess,
+} from "@/lib/access";
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
@@ -47,6 +53,9 @@ export function MobileNav() {
       : []),
     ...(hasCaisseAccess(role)
       ? [{ href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" }]
+      : []),
+    ...(hasMarketingAccess(role)
+      ? [{ href: "/dashboard/marketing", icon: Megaphone, label: "Marketing" }]
       : []),
     ...(canManageCollaborators(role)
       ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Collaborators" }]

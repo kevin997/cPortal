@@ -25,6 +25,7 @@ import {
   TrendingUp,
   RefreshCw,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import {
   Area,
@@ -149,16 +150,23 @@ export default function MarketingDashboardPage() {
             Vue d&apos;ensemble des prospects et de leur progression
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/marketing/messagerie">
+              <MessageSquare className="w-4 h-4" />
+              Messagerie
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

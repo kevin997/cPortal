@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Search, ChevronLeft, ChevronRight, Phone } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MessageCircleMore,
+  MessageSquareText,
+  Phone,
+  Search,
+} from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -192,6 +201,35 @@ function LeadsPageContent() {
           Suivez et qualifiez les prospects de la campagne marketing
         </p>
       </div>
+
+      <Card className="overflow-hidden border-primary/20 bg-primary/[0.035]">
+        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="font-semibold">Contacter cette audience</p>
+            <p className="text-sm text-muted-foreground">
+              Préparez une liste de 50 contacts par page, puis lancez une campagne depuis ce filtre.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+            <Button variant="outline" asChild>
+              <Link
+                href={`/dashboard/marketing/messagerie?stage=${encodeURIComponent(stageFilter)}&channel=sms`}
+              >
+                <MessageSquareText className="w-4 h-4" />
+                Campagne SMS
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link
+                href={`/dashboard/marketing/messagerie?stage=${encodeURIComponent(stageFilter)}&channel=whatsapp`}
+              >
+                <MessageCircleMore className="w-4 h-4" />
+                Campagne WhatsApp
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

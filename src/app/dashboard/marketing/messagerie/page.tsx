@@ -25,7 +25,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, Send, UserPlus, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Plus,
+  Send,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import {
   JOURNEY_STAGES,
   STAGE_BADGE_CLASSNAMES,
@@ -46,7 +55,7 @@ import {
   type ContactList,
   type MessageChannel,
   type SendBulkResult,
-} from "@/lib/eshu-api";
+} from "@/lib/messaging-api";
 
 const MAX_MESSAGE_LENGTH = 1000;
 const LEADS_PER_PAGE = 50;
@@ -63,6 +72,7 @@ export default function MessageriePage() {
   const [stage, setStage] = useState<JourneyStage | "all">("all");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsTotal, setLeadsTotal] = useState(0);
+  const [leadsPage, setLeadsPage] = useState(1);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
@@ -80,6 +90,19 @@ export default function MessageriePage() {
     () => lists.find((l) => l.id === selectedListId) ?? null,
     [lists, selectedListId]
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedStage = params.get("stage");
+    const requestedChannel = params.get("channel");
+
+    if (requestedStage === "all" || JOURNEY_STAGES.includes(requestedStage as JourneyStage)) {
+      setStage(requestedStage as JourneyStage | "all");
+    }
+    if (requestedChannel === "sms" || requestedChannel === "whatsapp") {
+      setChannel(requestedChannel);
+    }
+  }, []);
 
   const refreshLists = useCallback(async () => {
     try {
@@ -116,7 +139,7 @@ export default function MessageriePage() {
     setSelectedLeadIds(new Set());
     getLeads({
       stage: stage === "all" ? undefined : stage,
-      page: 1,
+      page: leadsPage,
       per_page: LEADS_PER_PAGE,
     })
       .then((res) => {
@@ -138,7 +161,14 @@ export default function MessageriePage() {
     return () => {
       cancelled = true;
     };
-  }, [stage]);
+  }, [stage, leadsPage]);
+
+  const leadsTotalPages = Math.max(1, Math.ceil(leadsTotal / LEADS_PER_PAGE));
+
+  function selectStage(nextStage: JourneyStage | "all") {
+    setStage(nextStage);
+    setLeadsPage(1);
+  }
 
   // Leads with no usable phone can't be messaged.
   const reachableLeads = useMemo(
@@ -269,6 +299,11 @@ export default function MessageriePage() {
   const canSend =
     Boolean(selectedListId) && message.trim().length > 0 && !sending;
 
+  const channelNotice =
+    channel === "sms"
+      ? "SMS : 50 destinataires maximum par jour. Le surplus est reporté automatiquement."
+      : "WhatsApp Wachap : audience illimitée, envoi progressif pour protéger le compte.";
+
   return (
     <div className="space-y-6 py-6">
       <div>
@@ -363,7 +398,7 @@ export default function MessageriePage() {
               <Button
                 variant={stage === "all" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStage("all")}
+                onClick={() => selectStage("all")}
               >
                 Tous
               </Button>
@@ -372,7 +407,7 @@ export default function MessageriePage() {
                   key={s}
                   variant={stage === s ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setStage(s)}
+                  onClick={() => selectStage(s)}
                 >
                   {STAGE_LABELS[s]}
                   {stageCounts[s] !== undefined && (
@@ -451,11 +486,37 @@ export default function MessageriePage() {
               </Table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                {reachableLeads.length} affiché(s) sur {leadsTotal} · les leads
-                désabonnés sont exclus
-              </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {reachableLeads.length} affiché(s) sur {leadsTotal} · page {leadsPage} /{" "}
+                  {leadsTotalPages} · les leads désabonnés sont exclus
+                </p>
+                <div className="flex gap-2" aria-label="Pagination des contacts">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingLeads || leadsPage <= 1}
+                    onClick={() => setLeadsPage((current) => Math.max(1, current - 1))}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Précédent
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingLeads || leadsPage >= leadsTotalPages}
+                    onClick={() =>
+                      setLeadsPage((current) => Math.min(leadsTotalPages, current + 1))
+                    }
+                  >
+                    Suivant
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
               <Button
                 size="sm"
                 onClick={handleAddSelectedLeads}
@@ -530,6 +591,7 @@ export default function MessageriePage() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs leading-5 text-muted-foreground">{channelNotice}</p>
           </div>
 
           <div className="space-y-2">
@@ -550,13 +612,13 @@ export default function MessageriePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleSend} disabled={!canSend}>
+            <Button onClick={handleSend} disabled={!canSend} className="w-full sm:w-auto">
               {sending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              Envoyer
+              Lancer la campagne
               {selectedList && ` à ${selectedList.name} (${selectedList.count})`}
             </Button>
             {!selectedListId && (

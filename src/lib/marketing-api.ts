@@ -131,7 +131,13 @@ export interface ImportBatch {
   totals: ImportResult["totals"];
 }
 
-export type CampaignStatus = "draft" | "scheduled" | "running" | "paused" | "done";
+export type CampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "running"
+  | "paused"
+  | "done"
+  | "cancelled";
 
 export interface CampaignAudience {
   stages: JourneyStage[];
@@ -149,6 +155,11 @@ export interface Campaign {
   audience: CampaignAudience;
   status: CampaignStatus;
   scheduled_at: string | null;
+  delivery_mode: "native" | "local";
+  wachap_list_id: string | null;
+  wachap_campaign_id: string | null;
+  remote_status: string | null;
+  remote_error: string | null;
   stats: {
     sent: number;
     failed: number;
@@ -166,7 +177,9 @@ export interface CampaignSend {
   id: string;
   lead_id: string;
   status: string;
-  created_at: string;
+  sent_at: string | null;
+  error: string | null;
+  wachap_message_id: string | null;
 }
 
 export interface CampaignSendsResponse {
@@ -307,6 +320,14 @@ export async function pauseCampaign(id: string): Promise<Campaign> {
   return marketingFetch<Campaign>(`campaigns/${id}/pause`, {
     method: "POST",
   });
+}
+
+export async function cancelCampaign(id: string): Promise<Campaign> {
+  return marketingFetch<Campaign>(`campaigns/${id}/cancel`, { method: "POST" });
+}
+
+export async function retryFailedCampaignSends(id: string): Promise<Campaign> {
+  return marketingFetch<Campaign>(`campaigns/${id}/retry-failed`, { method: "POST" });
 }
 
 export async function getCampaignSends(

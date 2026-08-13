@@ -45,6 +45,7 @@ model User {
   uploadedCreativeAssets      CreativeAsset[]        @relation("CreativeAssetUploader")
   createdSocialMediaPlans     SocialMediaPlan[]      @relation("SocialMediaPlanCreator")
 
+  @@index([createdById], map: "users_createdById_fkey")
   @@map("users")
 }
 
@@ -83,6 +84,8 @@ model Lead {
   referrer  User      @relation(fields: [referrerId], references: [id], onDelete: Cascade)
   promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
 
+  @@index([promotionId], map: "leads_promotionId_fkey")
+  @@index([referrerId], map: "leads_referrerId_fkey")
   @@map("leads")
 }
 
@@ -108,6 +111,7 @@ model Student {
   createdBy   User         @relation(fields: [createdById], references: [id])
   enrollments Enrollment[]
 
+  @@index([createdById], map: "students_createdById_fkey")
   @@map("students")
 }
 
@@ -150,6 +154,8 @@ model Enrollment {
   enrolledBy      User            @relation(fields: [enrolledById], references: [id])
 
   @@unique([studentId, bootcampSessionId])
+  @@index([bootcampSessionId], map: "enrollments_bootcampSessionId_fkey")
+  @@index([enrolledById], map: "enrollments_enrolledById_fkey")
   @@map("enrollments")
 }
 
@@ -166,6 +172,7 @@ model CashOperation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([userId], map: "cash_operations_userId_fkey")
   @@map("cash_operations")
 }
 
@@ -198,6 +205,7 @@ model UpcomingPayment {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@index([userId], map: "upcoming_payments_userId_fkey")
   @@map("upcoming_payments")
 }
 
@@ -215,6 +223,7 @@ model CashForecast {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([userId], map: "cash_forecasts_userId_fkey")
   @@map("cash_forecasts")
 }
 
@@ -291,6 +300,7 @@ model CreativeRequest {
   @@index([workflowStatus])
   @@index([assignedToId])
   @@index([socialMediaPlanId])
+  @@index([createdById], map: "creative_requests_createdById_fkey")
   @@map("creative_requests")
 }
 
@@ -321,6 +331,8 @@ model CreativeDeliverable {
   @@index([status])
   @@index([ownerId])
   @@index([socialMediaPlanId])
+  @@index([createdById], map: "creative_deliverables_createdById_fkey")
+  @@index([requestId], map: "creative_deliverables_requestId_fkey")
   @@map("creative_deliverables")
 }
 
@@ -342,6 +354,7 @@ model CreativeAsset {
 
   @@index([requestId])
   @@index([resourceType])
+  @@index([uploadedById], map: "creative_assets_uploadedById_fkey")
   @@map("creative_assets")
 }
 
@@ -367,5 +380,6 @@ model SocialMediaPlan {
   @@index([scheduledFor])
   @@index([status])
   @@index([clientName])
+  @@index([createdById], map: "social_media_plans_createdById_fkey")
   @@map("social_media_plans")
 }

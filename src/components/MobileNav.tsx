@@ -30,11 +30,17 @@ import {
 } from "@/lib/access";
 
 const navItems = [
-  { href: "/dashboard", icon: Home, label: "Dashboard" },
-  { href: "/dashboard/students", icon: Users, label: "Students" },
-  { href: "/dashboard/bootcamps", icon: Calendar, label: "Bootcamps" },
-  { href: "/dashboard/enrollments", icon: UserPlus, label: "Enroll" },
+  { href: "/dashboard", icon: Home, label: "Accueil" },
+  { href: "/dashboard/students", icon: Users, label: "Étudiants" },
+  { href: "/dashboard/bootcamps", icon: Calendar, label: "Sessions" },
+  { href: "/dashboard/enrollments", icon: UserPlus, label: "Inscriptions" },
 ];
+
+function isActiveRoute(pathname: string, href: string) {
+  return href === "/dashboard"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -44,12 +50,12 @@ export function MobileNav() {
 
   const moreNavItems = [
     { href: "/dashboard/promotions", icon: Gift, label: "Promotions" },
-    { href: "/dashboard/leads", icon: Target, label: "Leads" },
+    { href: "/dashboard/leads", icon: Target, label: "Prospects" },
     ...(hasContentCreationAccess(role)
-      ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Creation" }]
+      ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Création" }]
       : []),
     ...(hasContentCreationAccess(role)
-      ? [{ href: "/dashboard/social-media-calendar", icon: CalendarDays, label: "SM Calendar" }]
+      ? [{ href: "/dashboard/social-media-calendar", icon: CalendarDays, label: "Calendrier social" }]
       : []),
     ...(hasCaisseAccess(role)
       ? [{ href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" }]
@@ -58,11 +64,11 @@ export function MobileNav() {
       ? [{ href: "/dashboard/marketing", icon: Megaphone, label: "Marketing" }]
       : []),
     ...(canManageCollaborators(role)
-      ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Collaborators" }]
+      ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Équipe" }]
       : []),
   ];
 
-  const isMoreActive = moreNavItems.some((item) => pathname === item.href);
+  const isMoreActive = moreNavItems.some((item) => isActiveRoute(pathname, item.href));
 
   return (
     <>
@@ -81,7 +87,7 @@ export function MobileNav() {
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="p-2 hover:bg-accent rounded-md transition-colors"
-            aria-label="Sign out"
+            aria-label="Se déconnecter"
           >
             <LogOut className="w-5 h-5" />
           </button>
@@ -99,13 +105,13 @@ export function MobileNav() {
       {/* Slide-out Menu */}
       <div
         className={cn(
-          "fixed bottom-16 right-0 z-50 bg-card border rounded-tl-xl shadow-lg transition-transform duration-200 ease-out safe-area-inset-bottom",
+          "fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 max-h-[min(68vh,34rem)] overflow-y-auto rounded-2xl border bg-card shadow-2xl transition-transform duration-200 ease-out sm:left-auto sm:w-80",
           menuOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="p-2 min-w-[160px]">
+        <div className="p-2">
           {moreNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveRoute(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -130,7 +136,7 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t safe-area-inset-bottom">
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveRoute(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -143,7 +149,7 @@ export function MobileNav() {
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="max-w-full truncate px-1 text-[10px] font-medium sm:text-xs">{item.label}</span>
               </Link>
             );
           })}
@@ -157,7 +163,7 @@ export function MobileNav() {
             )}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            <span className="text-xs font-medium">More</span>
+            <span className="text-[10px] font-medium sm:text-xs">Plus</span>
           </button>
         </div>
       </nav>

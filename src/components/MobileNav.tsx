@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Home,
@@ -20,6 +20,7 @@ import {
   UserCog,
   CalendarDays,
   Megaphone,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,26 +31,33 @@ import {
 } from "@/lib/access";
 
 const navItems = [
-  { href: "/dashboard", icon: Home, label: "Dashboard" },
-  { href: "/dashboard/students", icon: Users, label: "Students" },
-  { href: "/dashboard/bootcamps", icon: Calendar, label: "Bootcamps" },
-  { href: "/dashboard/enrollments", icon: UserPlus, label: "Enroll" },
+  { href: "/dashboard", icon: Home, label: "Accueil" },
+  { href: "/dashboard/students", icon: Users, label: "Étudiants" },
+  { href: "/dashboard/bootcamps", icon: Calendar, label: "Sessions" },
+  { href: "/dashboard/enrollments", icon: UserPlus, label: "Inscriptions" },
 ];
+
+function isActiveRoute(pathname: string, href: string) {
+  return href === "/dashboard"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const role = session?.user?.role;
 
   const moreNavItems = [
     { href: "/dashboard/promotions", icon: Gift, label: "Promotions" },
-    { href: "/dashboard/leads", icon: Target, label: "Leads" },
+    { href: "/dashboard/leads", icon: Target, label: "Prospects" },
     ...(hasContentCreationAccess(role)
-      ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Creation" }]
+      ? [{ href: "/dashboard/creation-contenu", icon: Palette, label: "Création" }]
       : []),
     ...(hasContentCreationAccess(role)
-      ? [{ href: "/dashboard/social-media-calendar", icon: CalendarDays, label: "SM Calendar" }]
+      ? [{ href: "/dashboard/social-media-calendar", icon: CalendarDays, label: "Calendrier social" }]
       : []),
     ...(hasCaisseAccess(role)
       ? [{ href: "/dashboard/caisse", icon: TrendingUp, label: "Caisse" }]
@@ -58,18 +66,39 @@ export function MobileNav() {
       ? [{ href: "/dashboard/marketing", icon: Megaphone, label: "Marketing" }]
       : []),
     ...(canManageCollaborators(role)
-      ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Collaborators" }]
+      ? [{ href: "/dashboard/collaborators", icon: UserCog, label: "Équipe" }]
       : []),
   ];
 
-  const isMoreActive = moreNavItems.some((item) => pathname === item.href);
+  const isMoreActive = moreNavItems.some((item) => isActiveRoute(pathname, item.href));
+  const isDashboardHome = pathname === "/dashboard";
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/dashboard");
+  };
 
   return (
     <>
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b safe-area-inset-top">
-        <div className="flex items-center justify-between px-4 h-14">
-          <Link href="/dashboard" className="flex items-center gap-2">
+        <div className="flex h-14 items-center justify-between px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-1">
+            {!isDashboardHome && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:bg-accent"
+                aria-label="Retour à l'écran précédent"
+              >
+                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Retour</span>
+              </button>
+            )}
+            <Link href="/dashboard" className="flex items-center gap-2" aria-label="Accueil cPortal">
             <Image
               src="/logo-c-portal.svg"
               alt="cPortal"
@@ -77,11 +106,12 @@ export function MobileNav() {
               height={32}
               className="h-8 w-auto"
             />
-          </Link>
+            </Link>
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="p-2 hover:bg-accent rounded-md transition-colors"
-            aria-label="Sign out"
+            aria-label="Se déconnecter"
           >
             <LogOut className="w-5 h-5" />
           </button>
@@ -99,13 +129,13 @@ export function MobileNav() {
       {/* Slide-out Menu */}
       <div
         className={cn(
-          "fixed bottom-16 right-0 z-50 bg-card border rounded-tl-xl shadow-lg transition-transform duration-200 ease-out safe-area-inset-bottom",
+          "fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 max-h-[min(68vh,34rem)] overflow-y-auto rounded-2xl border bg-card shadow-2xl transition-transform duration-200 ease-out sm:left-auto sm:w-80",
           menuOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="p-2 min-w-[160px]">
+        <div className="p-2">
           {moreNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveRoute(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -130,7 +160,7 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t safe-area-inset-bottom">
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveRoute(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -143,7 +173,7 @@ export function MobileNav() {
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="max-w-full truncate px-1 text-[10px] font-medium sm:text-xs">{item.label}</span>
               </Link>
             );
           })}
@@ -157,7 +187,7 @@ export function MobileNav() {
             )}
           >
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            <span className="text-xs font-medium">More</span>
+            <span className="text-[10px] font-medium sm:text-xs">Plus</span>
           </button>
         </div>
       </nav>

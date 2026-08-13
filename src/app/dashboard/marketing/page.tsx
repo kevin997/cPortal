@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Loader2,
   MessageSquare,
+  Puzzle,
 } from "lucide-react";
 import {
   Area,
@@ -151,6 +152,13 @@ export default function MarketingDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/marketing/extension">
+              <Puzzle className="w-4 h-4" />
+              <span className="hidden sm:inline">Extension CRM</span>
+              <span className="sm:hidden">CRM</span>
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard/marketing/messagerie">
               <MessageSquare className="w-4 h-4" />

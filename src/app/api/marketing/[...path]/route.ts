@@ -34,6 +34,39 @@ async function handler(
     const isBodyMethod = !["GET", "HEAD"].includes(request.method);
     const contentType = request.headers.get("content-type");
 
+    // A non-admin can prepare and preview campaigns, but a large WhatsApp
+    // audience requires an administrator's explicit launch approval.
+    if (
+      request.method === "POST" &&
+      path.length === 3 &&
+      path[0] === "campaigns" &&
+      path[2] === "send-now" &&
+      session.user.role !== "admin"
+    ) {
+      const previewResponse = await fetch(
+        `${AUTOMATIONS_API_URL}/api/campaigns/${path[1]}/preview`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${AUTOMATIONS_API_TOKEN}` },
+        }
+      );
+      const preview = await previewResponse.json().catch(() => null);
+      if (!previewResponse.ok) {
+        return NextResponse.json(preview ?? { error: "Aperçu indisponible" }, {
+          status: previewResponse.status,
+        });
+      }
+      if ((preview?.audience_count ?? 0) > 50) {
+        return NextResponse.json(
+          {
+            error:
+              "Cette campagne dépasse 50 destinataires et doit être lancée par un administrateur.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const init: RequestInit & { duplex?: "half" } = {
       method: request.method,
       headers: {

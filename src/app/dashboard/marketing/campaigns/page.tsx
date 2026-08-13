@@ -33,23 +33,27 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import {
-  Plus,
-  Loader2,
-  Send,
-  Pause,
-  Users,
-  MessageSquare,
+  Ban,
   Calendar as CalendarIcon,
+  Loader2,
+  MessageSquare,
+  Pause,
+  Plus,
+  RotateCcw,
+  Send,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
+  cancelCampaign,
   createCampaign,
   getCampaign,
   getCampaigns,
   getCampaignSends,
   pauseCampaign,
   previewCampaign,
+  retryFailedCampaignSends,
   sendCampaignNow,
   Campaign,
   CampaignPreview,
@@ -77,6 +81,10 @@ const STATUS_BADGE: Record<CampaignStatus, { className: string; label: string }>
   done: {
     className: "bg-purple-500/10 text-purple-600 border-purple-200",
     label: "Terminée",
+  },
+  cancelled: {
+    className: "bg-slate-500/10 text-slate-600 border-slate-200",
+    label: "Annulée",
   },
 };
 
@@ -120,6 +128,7 @@ export default function CampaignsPage() {
   const [sendsStatus, setSendsStatus] = useState("all");
   const [sendsLoading, setSendsLoading] = useState(false);
   const [pausing, setPausing] = useState(false);
+  const [campaignAction, setCampaignAction] = useState<"cancel" | "retry" | null>(null);
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
@@ -228,15 +237,14 @@ export default function CampaignsPage() {
     if (!previewCampaignData) return;
     setConfirming(true);
     try {
+      await sendCampaignNow(previewCampaignData.id);
       if (previewCampaignData.scheduled_at) {
-        // Already scheduled at creation time — nothing more to do.
         toast({
           title: "Campagne planifiée",
           description: "La campagne partira automatiquement à la date prévue",
           variant: "success",
         });
       } else {
-        await sendCampaignNow(previewCampaignData.id);
         toast({
           title: "Envoi lancé",
           description: "La campagne WhatsApp est en cours d'envoi",
@@ -308,6 +316,45 @@ export default function CampaignsPage() {
       });
     } finally {
       setPausing(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!detailCampaign) return;
+    setCampaignAction("cancel");
+    try {
+      const updated = await cancelCampaign(detailCampaign.id);
+      setDetailCampaign(updated);
+      await fetchCampaigns();
+      toast({ title: "Campagne annulée", variant: "success" });
+    } catch (error) {
+      toast({
+        title: "Annulation impossible",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setCampaignAction(null);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    if (!detailCampaign) return;
+    setCampaignAction("retry");
+    try {
+      const updated = await retryFailedCampaignSends(detailCampaign.id);
+      setDetailCampaign(updated);
+      await fetchCampaigns();
+      await fetchSends(updated.id, "all");
+      toast({ title: "Nouvelle tentative programmée", variant: "success" });
+    } catch (error) {
+      toast({
+        title: "Nouvelle tentative impossible",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setCampaignAction(null);
     }
   };
 
@@ -546,7 +593,7 @@ export default function CampaignsPage() {
 
       {/* Preview / confirm dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Aperçu de l&apos;audience</DialogTitle>
             <DialogDescription>
@@ -564,6 +611,9 @@ export default function CampaignsPage() {
                 <Users className="w-5 h-5 text-primary" />
                 {preview?.audience_count ?? 0} destinataire(s)
               </div>
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm leading-5 text-emerald-950">
+                WhatsApp Wachap n&apos;a pas de quota quotidien. Les contacts désabonnés sont exclus et les messages sont espacés automatiquement.
+              </p>
               {!!preview?.sample.length && (
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Échantillon</p>
@@ -595,11 +645,15 @@ export default function CampaignsPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+          <DialogFooter className="grid grid-cols-2 gap-2 sm:flex">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)} className="w-full">
               Annuler
             </Button>
-            <Button onClick={handleConfirmSend} disabled={confirming || previewLoading}>
+            <Button
+              onClick={handleConfirmSend}
+              disabled={confirming || previewLoading || !preview?.audience_count}
+              className="w-full"
+            >
               {confirming ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -623,6 +677,20 @@ export default function CampaignsPage() {
                 </DialogTitle>
                 <DialogDescription>{detailCampaign.message_fr}</DialogDescription>
               </DialogHeader>
+
+              {detailCampaign.delivery_mode === "native" && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium">Pilotage Wachap natif</span>
+                    <Badge variant="outline">
+                      {detailCampaign.remote_status || "en préparation"}
+                    </Badge>
+                  </div>
+                  {detailCampaign.remote_error && (
+                    <p className="mt-2 text-destructive">{detailCampaign.remote_error}</p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
@@ -660,6 +728,38 @@ export default function CampaignsPage() {
                   Mettre en pause
                 </Button>
               )}
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {detailCampaign.stats.failed > 0 && detailCampaign.status !== "running" && (
+                  <Button
+                    variant="outline"
+                    onClick={handleRetryFailed}
+                    disabled={campaignAction !== null}
+                  >
+                    {campaignAction === "retry" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-4 h-4" />
+                    )}
+                    Réessayer les échecs
+                  </Button>
+                )}
+                {!['done', 'cancelled'].includes(detailCampaign.status) && (
+                  <Button
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleCancel}
+                    disabled={campaignAction !== null}
+                  >
+                    {campaignAction === "cancel" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Ban className="w-4 h-4" />
+                    )}
+                    Annuler la campagne
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -699,6 +799,7 @@ export default function CampaignsPage() {
                           <TableHead>Lead</TableHead>
                           <TableHead>Statut</TableHead>
                           <TableHead>Date</TableHead>
+                          <TableHead>Détail</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -707,9 +808,12 @@ export default function CampaignsPage() {
                             <TableCell>{send.lead_id}</TableCell>
                             <TableCell>{send.status}</TableCell>
                             <TableCell>
-                              {format(new Date(send.created_at), "d MMM HH:mm", {
-                                locale: fr,
-                              })}
+                              {send.sent_at
+                                ? format(new Date(send.sent_at), "d MMM HH:mm", { locale: fr })
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
+                              {send.error || send.wachap_message_id || "—"}
                             </TableCell>
                           </TableRow>
                         ))}

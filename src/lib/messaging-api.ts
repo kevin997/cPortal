@@ -94,3 +94,14 @@ export function addContactsToList(
     body: JSON.stringify({ contacts }),
   });
 }
+
+export interface WachapLabel { id?: string; labelId?: string; name: string; color?: number }
+export interface WachapSyncResult { created: number; merged: number; skipped: number; total: number }
+
+export function getWachapLabels(): Promise<{ labels: WachapLabel[]; available: boolean; reason?: string }> {
+  return messagingFetch("wachap/labels");
+}
+
+export function syncWachapContacts(): Promise<WachapSyncResult> {
+  return messagingFetch("wachap/sync", { method: "POST" });
+}

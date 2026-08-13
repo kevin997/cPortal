@@ -48,16 +48,16 @@ export default function ExtensionGuidePage() {
         <div className="max-w-2xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-100">
             <MessageCircleMore className="h-4 w-4" />
-            WhatsApp Web + cPortal
+            Eshu + WhatsApp Web + cPortal
           </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Installer le CRM WhatsApp CSL</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Installer Eshu WhatsApp CRM</h1>
           <p className="mt-3 text-sm leading-6 text-emerald-50/80 sm:text-base">
             Qualifiez un contact, planifiez sa relance et enregistrez son accord directement au-dessus de la conversation WhatsApp.
           </p>
           <Button asChild className="mt-6 w-full bg-white text-[#12372d] hover:bg-emerald-50 sm:w-auto">
-            <a href="/downloads/csl-brands-extension-1.2.1.zip" download>
+            <a href="/downloads/eshu-whatsapp-crm.zip" download>
               <Download className="h-4 w-4" />
-              Télécharger CSL BRANDS 1.2.1
+              Télécharger Eshu WhatsApp CRM
             </a>
           </Button>
         </div>

@@ -85,6 +85,29 @@ export interface LeadsQuery {
   per_page?: number;
 }
 
+export interface EshuCrmLead {
+  id: string;
+  lead_id: string | null;
+  full_name: string;
+  business_name: string;
+  email: string;
+  whatsapp_number: string;
+  phone_normalized: string;
+  team_size: string;
+  primary_need: string;
+  offer_code: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EshuCrmLeadsResponse {
+  items: EshuCrmLead[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
 export interface JourneySummary {
   stages: { stage: JourneyStage; count: number }[];
   by_product: { name: string; count: number }[];
@@ -267,6 +290,15 @@ export async function updateLead(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function getEshuCrmLeads(query: {
+  q?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<EshuCrmLeadsResponse> {
+  const qs = buildQuery({ q: query.q, page: query.page, per_page: query.per_page });
+  return marketingFetch<EshuCrmLeadsResponse>(`eshu-crm/leads${qs}`);
 }
 
 // Journey

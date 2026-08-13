@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   ContactRound,
+  Gem,
   FileUp,
   Megaphone,
   MessageSquareText,
@@ -19,6 +20,7 @@ const MARKETING_ROOT = "/dashboard/marketing";
 const sections = [
   { href: MARKETING_ROOT, label: "Vue d'ensemble", icon: BarChart3 },
   { href: `${MARKETING_ROOT}/leads`, label: "Contacts", icon: ContactRound },
+  { href: `${MARKETING_ROOT}/eshu-crm-leads`, label: "Eshu CRM Leads", icon: Gem },
   { href: `${MARKETING_ROOT}/messagerie`, label: "Messagerie", icon: MessageSquareText },
   { href: `${MARKETING_ROOT}/campaigns`, label: "Campagnes", icon: Megaphone },
   { href: `${MARKETING_ROOT}/workflows`, label: "Workflows", icon: Workflow },

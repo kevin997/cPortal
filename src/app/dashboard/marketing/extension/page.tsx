@@ -55,9 +55,9 @@ export default function ExtensionGuidePage() {
             Qualifiez un contact, planifiez sa relance et enregistrez son accord directement au-dessus de la conversation WhatsApp.
           </p>
           <Button asChild className="mt-6 w-full bg-white text-[#12372d] hover:bg-emerald-50 sm:w-auto">
-            <a href="/downloads/csl-brands-extension-1.2.0.zip" download>
+            <a href="/downloads/csl-brands-extension-1.2.1.zip" download>
               <Download className="h-4 w-4" />
-              Télécharger CSL BRANDS 1.2.0
+              Télécharger CSL BRANDS 1.2.1
             </a>
           </Button>
         </div>

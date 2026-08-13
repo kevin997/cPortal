@@ -1,6 +1,4 @@
-import Link from "next/link";
 import {
-  ArrowLeft,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -46,13 +44,6 @@ const fields = [
 export default function ExtensionGuidePage() {
   return (
     <div className="space-y-6 py-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link href="/dashboard/marketing">
-          <ArrowLeft className="h-4 w-4" />
-          Marketing
-        </Link>
-      </Button>
-
       <section className="overflow-hidden rounded-3xl bg-[#12372d] px-5 py-7 text-white sm:px-8 sm:py-9">
         <div className="max-w-2xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-100">

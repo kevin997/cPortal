@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -307,12 +305,6 @@ export default function MessageriePage() {
   return (
     <div className="space-y-6 py-6">
       <div>
-        <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-          <Link href="/dashboard/marketing">
-            <ArrowLeft className="w-4 h-4" />
-            Marketing
-          </Link>
-        </Button>
         <h2 className="text-2xl font-bold tracking-tight">Messagerie en masse</h2>
         <p className="text-muted-foreground">
           Constituez une liste depuis l&apos;entonnoir de conversion, puis envoyez

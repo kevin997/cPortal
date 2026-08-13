@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Home,
@@ -20,6 +20,7 @@ import {
   UserCog,
   CalendarDays,
   Megaphone,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +45,7 @@ function isActiveRoute(pathname: string, href: string) {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const role = session?.user?.role;
@@ -69,13 +71,34 @@ export function MobileNav() {
   ];
 
   const isMoreActive = moreNavItems.some((item) => isActiveRoute(pathname, item.href));
+  const isDashboardHome = pathname === "/dashboard";
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/dashboard");
+  };
 
   return (
     <>
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b safe-area-inset-top">
-        <div className="flex items-center justify-between px-4 h-14">
-          <Link href="/dashboard" className="flex items-center gap-2">
+        <div className="flex h-14 items-center justify-between px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-1">
+            {!isDashboardHome && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:bg-accent"
+                aria-label="Retour à l'écran précédent"
+              >
+                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Retour</span>
+              </button>
+            )}
+            <Link href="/dashboard" className="flex items-center gap-2" aria-label="Accueil cPortal">
             <Image
               src="/logo-c-portal.svg"
               alt="cPortal"
@@ -83,7 +106,8 @@ export function MobileNav() {
               height={32}
               className="h-8 w-auto"
             />
-          </Link>
+            </Link>
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="p-2 hover:bg-accent rounded-md transition-colors"

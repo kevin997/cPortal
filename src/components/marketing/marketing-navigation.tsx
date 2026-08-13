@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  ArrowLeft,
   BarChart3,
   ContactRound,
   FileUp,
@@ -27,33 +26,10 @@ const sections = [
 
 export function MarketingNavigation() {
   const pathname = usePathname();
-  const router = useRouter();
   const isMarketingHome = pathname === MARKETING_ROOT;
-
-  const goBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push(MARKETING_ROOT);
-  };
 
   return (
     <div className="space-y-3 pt-4 sm:pt-6">
-      {!isMarketingHome && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="-ml-2 min-h-10 gap-2 px-2"
-          onClick={goBack}
-          aria-label="Retour à l'écran précédent"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Retour
-        </Button>
-      )}
-
       <nav aria-label="Navigation marketing" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <div className="flex min-w-max gap-1 rounded-xl border bg-muted/40 p-1">
           {sections.map(({ href, label, icon: Icon }) => {

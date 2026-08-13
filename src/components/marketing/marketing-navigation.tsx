@@ -9,6 +9,7 @@ import {
   Megaphone,
   MessageSquareText,
   Puzzle,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,8 +21,9 @@ const sections = [
   { href: `${MARKETING_ROOT}/leads`, label: "Contacts", icon: ContactRound },
   { href: `${MARKETING_ROOT}/messagerie`, label: "Messagerie", icon: MessageSquareText },
   { href: `${MARKETING_ROOT}/campaigns`, label: "Campagnes", icon: Megaphone },
+  { href: `${MARKETING_ROOT}/workflows`, label: "Workflows", icon: Workflow },
   { href: `${MARKETING_ROOT}/import`, label: "Import", icon: FileUp },
-  { href: `${MARKETING_ROOT}/extension`, label: "Extension CRM", icon: Puzzle },
+  { href: `${MARKETING_ROOT}/extension`, label: "Eshu CRM", icon: Puzzle },
 ] as const;
 
 export function MarketingNavigation() {

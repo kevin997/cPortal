@@ -175,7 +175,13 @@ export interface Campaign {
   name: string;
   message_fr: string;
   message_en: string | null;
-  audience: CampaignAudience;
+  /**
+   * Partial, not CampaignAudience: campaigns created by the messagerie
+   * bulk-send path are stored with audience={}, so these arrays are routinely
+   * absent. Typing them as required made the compiler vouch for fields the API
+   * never sends, and reading .length on them crashed the campaigns list.
+   */
+  audience: Partial<CampaignAudience>;
   status: CampaignStatus;
   scheduled_at: string | null;
   delivery_mode: "native" | "local";

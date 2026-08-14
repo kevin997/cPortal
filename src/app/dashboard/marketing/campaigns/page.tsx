@@ -287,6 +287,11 @@ export default function CampaignsPage() {
   const openDetail = async (campaign: Campaign) => {
     setDetailOpen(true);
     setSendsStatus("all");
+    // Show the row we already have straight away. The dialog used to open with
+    // detailCampaign still null until the fetch resolved, so its DialogTitle
+    // and DialogDescription -- which live inside that conditional -- did not
+    // exist: an unlabelled dialog for screen readers, and a blank flash.
+    setDetailCampaign(campaign);
     try {
       const fresh = await getCampaign(campaign.id);
       setDetailCampaign(fresh);
@@ -729,6 +734,15 @@ export default function CampaignsPage() {
       {/* Campaign detail dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Radix requires a title on every DialogContent; without this the
+              dialog is unlabelled for screen readers in any state where the
+              campaign is not loaded. */}
+          {!detailCampaign && (
+            <DialogHeader>
+              <DialogTitle>Détail de la campagne</DialogTitle>
+              <DialogDescription>Chargement des informations…</DialogDescription>
+            </DialogHeader>
+          )}
           {detailCampaign && (
             <>
               <DialogHeader>

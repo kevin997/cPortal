@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { relaunchCampaign } from "@/lib/messaging-api";
 import {
   Ban,
   Calendar as CalendarIcon,
@@ -128,7 +129,7 @@ export default function CampaignsPage() {
   const [sendsStatus, setSendsStatus] = useState("all");
   const [sendsLoading, setSendsLoading] = useState(false);
   const [pausing, setPausing] = useState(false);
-  const [campaignAction, setCampaignAction] = useState<"cancel" | "retry" | null>(null);
+  const [campaignAction, setCampaignAction] = useState<"cancel" | "retry" | "relaunch" | null>(null);
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
@@ -358,6 +359,36 @@ export default function CampaignsPage() {
     }
   };
 
+  /**
+   * Re-send this campaign's message to the list it targeted. Wachap cannot
+   * re-run a finished campaign -- attempting that is what returned 500s -- so
+   * the backend creates a new campaign against the same list.
+   */
+  const handleRelaunch = async () => {
+    if (!detailCampaign) return;
+    setCampaignAction("relaunch");
+    try {
+      const result = await relaunchCampaign(detailCampaign.id);
+      await fetchCampaigns();
+      toast({
+        title: "Campagne relancée",
+        description: `${result.queued} contact${result.queued > 1 ? "s" : ""} · statut ${
+          result.remoteStatus ?? "en cours"
+        }`,
+        variant: "success",
+      });
+      setDetailOpen(false);
+    } catch (error) {
+      toast({
+        title: "Relance impossible",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setCampaignAction(null);
+    }
+  };
+
   const audienceSummary = (campaign: Campaign) => {
     const parts: string[] = [];
     // A campaign sent from the messagerie screen is stored with audience={},
@@ -365,6 +396,20 @@ export default function CampaignsPage() {
     // so a single such row took down the whole list rather than degrading to
     // "Tous les leads", which is exactly what an empty audience means.
     const audience = campaign.audience ?? {};
+
+    // Campaigns sent from the messagerie screen target a saved list; naming it
+    // is far more useful than the "Tous les leads" fallback they used to show.
+    if (audience.kind === "list") {
+      return audience.list_name
+        ? `Liste : ${audience.list_name}`
+        : "Liste enregistrée";
+    }
+    if (audience.kind === "numbers") {
+      return `${audience.count ?? 0} numéro${(audience.count ?? 0) > 1 ? "s" : ""} saisi${
+        (audience.count ?? 0) > 1 ? "s" : ""
+      }`;
+    }
+
     const stages = audience.stages ?? [];
     const products = audience.products ?? [];
     const countries = audience.countries ?? [];
@@ -751,6 +796,20 @@ export default function CampaignsPage() {
                       <RotateCcw className="w-4 h-4" />
                     )}
                     Réessayer les échecs
+                  </Button>
+                )}
+                {detailCampaign.audience?.list_id && (
+                  <Button
+                    variant="outline"
+                    onClick={handleRelaunch}
+                    disabled={campaignAction !== null}
+                  >
+                    {campaignAction === "relaunch" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    Relancer sur la même liste
                   </Button>
                 )}
                 {!['done', 'cancelled'].includes(detailCampaign.status) && (

@@ -84,6 +84,56 @@ export async function getLists(): Promise<ContactList[]> {
   return Array.isArray(data?.lists) ? data.lists : [];
 }
 
+export interface ListContactRow {
+  id: string;
+  phone: string;
+  name: string | null;
+  opted_out: boolean;
+  created_at: string;
+}
+
+export interface ListContactsPage {
+  listId: string;
+  contacts: ListContactRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getList(listId: string): Promise<ContactList> {
+  const data = await messagingFetch<{ list: ContactList }>(`lists/${listId}`);
+  return data.list;
+}
+
+export async function getListContacts(
+  listId: string,
+  opts: { limit?: number; offset?: number; q?: string } = {}
+): Promise<ListContactsPage> {
+  const params = new URLSearchParams();
+  params.set("limit", String(opts.limit ?? 50));
+  params.set("offset", String(opts.offset ?? 0));
+  if (opts.q?.trim()) params.set("q", opts.q.trim());
+  const data = await messagingFetch<Partial<ListContactsPage>>(
+    `lists/${listId}/contacts?${params.toString()}`
+  );
+  return {
+    listId,
+    contacts: Array.isArray(data?.contacts) ? data.contacts : [],
+    total: data?.total ?? 0,
+    limit: data?.limit ?? (opts.limit ?? 50),
+    offset: data?.offset ?? (opts.offset ?? 0),
+  };
+}
+
+/**
+ * Re-sends a campaign's message to the list it originally targeted. Wachap
+ * cannot re-run a finished campaign, so this creates a new one against the
+ * same list. Admin-only -- enforced in the proxy route, not just here.
+ */
+export function relaunchCampaign(campaignId: string): Promise<SendBulkResult> {
+  return messagingFetch(`campaigns/${campaignId}/relaunch`, { method: "POST" });
+}
+
 export async function createList(name: string): Promise<ContactList> {
   return (await messagingFetch<{ list: ContactList }>("lists", {
     method: "POST",

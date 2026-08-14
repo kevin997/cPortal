@@ -67,6 +67,23 @@ async function handler(
       }
     }
 
+    // Relaunching re-sends to an entire saved list in one click, which is the
+    // large-audience case the rule above exists for -- and it would not match
+    // that check, whose shape is campaigns/{id}/send-now. Admin-only.
+    if (
+      request.method === "POST" &&
+      path.length === 4 &&
+      path[0] === "messaging" &&
+      path[1] === "campaigns" &&
+      path[3] === "relaunch" &&
+      session.user.role !== "admin"
+    ) {
+      return NextResponse.json(
+        { error: "Le relancement d'une campagne doit être effectué par un administrateur." },
+        { status: 403 }
+      );
+    }
+
     const init: RequestInit & { duplex?: "half" } = {
       method: request.method,
       headers: {

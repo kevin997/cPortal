@@ -389,6 +389,13 @@ export default function CampaignsPage() {
     }
   };
 
+  /** Stats are not guaranteed by the API; treat absence as zero, not a crash. */
+  const statsOf = (c: Campaign | null) => ({
+    sent: c?.stats?.sent ?? 0,
+    failed: c?.stats?.failed ?? 0,
+    skipped: c?.stats?.skipped ?? 0,
+  });
+
   const audienceSummary = (campaign: Campaign) => {
     const parts: string[] = [];
     // A campaign sent from the messagerie screen is stored with audience={},
@@ -475,10 +482,10 @@ export default function CampaignsPage() {
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-green-600">
-                      Envoyés : {campaign.stats.sent}
+                      Envoyés : {statsOf(campaign).sent}
                     </span>
                     <span className="text-destructive">
-                      Échecs : {campaign.stats.failed}
+                      Échecs : {statsOf(campaign).failed}
                     </span>
                     {campaign.scheduled_at && (
                       <span className="text-muted-foreground flex items-center gap-1">
@@ -749,19 +756,19 @@ export default function CampaignsPage() {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-xl font-bold text-green-600">
-                    {detailCampaign.stats.sent}
+                    {statsOf(detailCampaign).sent}
                   </p>
                   <p className="text-xs text-muted-foreground">Envoyés</p>
                 </div>
                 <div>
                   <p className="text-xl font-bold text-destructive">
-                    {detailCampaign.stats.failed}
+                    {statsOf(detailCampaign).failed}
                   </p>
                   <p className="text-xs text-muted-foreground">Échecs</p>
                 </div>
                 <div>
                   <p className="text-xl font-bold text-muted-foreground">
-                    {detailCampaign.stats.skipped}
+                    {statsOf(detailCampaign).skipped}
                   </p>
                   <p className="text-xs text-muted-foreground">Ignorés</p>
                 </div>
@@ -784,7 +791,7 @@ export default function CampaignsPage() {
               )}
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {detailCampaign.stats.failed > 0 && detailCampaign.status !== "running" && (
+                {statsOf(detailCampaign).failed > 0 && detailCampaign.status !== "running" && (
                   <Button
                     variant="outline"
                     onClick={handleRetryFailed}

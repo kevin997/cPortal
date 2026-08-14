@@ -360,17 +360,26 @@ export default function CampaignsPage() {
 
   const audienceSummary = (campaign: Campaign) => {
     const parts: string[] = [];
-    if (campaign.audience.stages.length) {
-      parts.push(campaign.audience.stages.map((s) => STAGE_LABELS[s]).join(", "));
+    // A campaign sent from the messagerie screen is stored with audience={},
+    // so every one of these is absent -- and this runs inside campaigns.map(),
+    // so a single such row took down the whole list rather than degrading to
+    // "Tous les leads", which is exactly what an empty audience means.
+    const audience = campaign.audience ?? {};
+    const stages = audience.stages ?? [];
+    const products = audience.products ?? [];
+    const countries = audience.countries ?? [];
+
+    if (stages.length) {
+      parts.push(stages.map((s) => STAGE_LABELS[s]).join(", "));
     }
-    if (campaign.audience.products.length) {
-      parts.push(campaign.audience.products.join(", "));
+    if (products.length) {
+      parts.push(products.join(", "));
     }
-    if (campaign.audience.countries.length) {
-      parts.push(campaign.audience.countries.join(", "));
+    if (countries.length) {
+      parts.push(countries.join(", "));
     }
-    if (campaign.audience.inactive_days) {
-      parts.push(`inactifs ${campaign.audience.inactive_days}j+`);
+    if (audience.inactive_days) {
+      parts.push(`inactifs ${audience.inactive_days}j+`);
     }
     return parts.length ? parts.join(" · ") : "Tous les leads";
   };

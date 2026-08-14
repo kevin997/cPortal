@@ -198,11 +198,16 @@ export interface Campaign {
   wachap_campaign_id: string | null;
   remote_status: string | null;
   remote_error: string | null;
-  stats: {
+  /**
+   * Partial for the same reason as `audience`: the API does not guarantee
+   * these keys, and typing them as required let `.stats.sent` through the
+   * compiler and straight into a runtime crash.
+   */
+  stats: Partial<{
     sent: number;
     failed: number;
     skipped: number;
-  };
+  }>;
   created_at: string;
 }
 
@@ -331,7 +336,19 @@ export async function getCampaigns(): Promise<Campaign[]> {
 }
 
 export async function getCampaign(id: string): Promise<Campaign> {
-  return marketingFetch<Campaign>(`campaigns/${id}`);
+  // This endpoint answers {campaign, sends_summary}, not a bare Campaign.
+  // Typing it as Campaign made every field undefined at runtime: callers read
+  // .id (producing a request to /campaigns/undefined/sends) and .stats.sent,
+  // which threw "Cannot read properties of undefined". Unwrap, and tolerate a
+  // bare object in case the endpoint is ever flattened.
+  const data = await marketingFetch<{ campaign?: Campaign } & Partial<Campaign>>(
+    `campaigns/${id}`
+  );
+  const campaign = (data?.campaign ?? data) as Campaign;
+  if (!campaign?.id) {
+    throw new Error("Réponse inattendue du service campagnes");
+  }
+  return campaign;
 }
 
 export interface CreateCampaignInput {

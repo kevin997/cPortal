@@ -168,6 +168,15 @@ export interface CampaignAudience {
   countries: string[];
   sources: string[];
   inactive_days: number | null;
+  /**
+   * Set by the messagerie bulk-send path, which targets a saved contact list
+   * rather than a journey/product filter. `list_id` is what makes a campaign
+   * relaunchable -- without it there is nothing to re-send to.
+   */
+  kind?: "list" | "numbers";
+  list_id?: string;
+  list_name?: string | null;
+  count?: number;
 }
 
 export interface Campaign {

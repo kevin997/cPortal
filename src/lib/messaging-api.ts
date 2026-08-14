@@ -39,6 +39,8 @@ export interface SendBulkResult {
   queued: number;
   skipped: number;
   total: number;
+  /** Wachap's own status right after launch -- "queued" is not "delivered". */
+  remoteStatus?: string;
 }
 
 async function messagingFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -75,7 +77,11 @@ export function parseContactLines(raw: string): ListContact[] {
 }
 
 export async function getLists(): Promise<ContactList[]> {
-  return (await messagingFetch<{ lists: ContactList[] }>("lists")).lists;
+  // A 200 whose body has no `lists` used to resolve to undefined, which reached
+  // the UI as `lists.map(...)` / `lists.length` and took the page down with
+  // "Cannot read properties of undefined". Always hand back an array.
+  const data = await messagingFetch<{ lists?: ContactList[] }>("lists");
+  return Array.isArray(data?.lists) ? data.lists : [];
 }
 
 export async function createList(name: string): Promise<ContactList> {
@@ -98,8 +104,15 @@ export function addContactsToList(
 export interface WachapLabel { id?: string; labelId?: string; name: string; color?: number }
 export interface WachapSyncResult { created: number; merged: number; skipped: number; total: number }
 
-export function getWachapLabels(): Promise<{ labels: WachapLabel[]; available: boolean; reason?: string }> {
-  return messagingFetch("wachap/labels");
+export async function getWachapLabels(): Promise<{ labels: WachapLabel[]; available: boolean; reason?: string }> {
+  const data = await messagingFetch<{ labels?: WachapLabel[]; available?: boolean; reason?: string }>(
+    "wachap/labels"
+  );
+  return {
+    labels: Array.isArray(data?.labels) ? data.labels : [],
+    available: Boolean(data?.available),
+    reason: data?.reason,
+  };
 }
 
 export function syncWachapContacts(): Promise<WachapSyncResult> {

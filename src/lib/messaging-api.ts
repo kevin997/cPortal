@@ -154,14 +154,24 @@ export function addContactsToList(
 export interface WachapLabel { id?: string; labelId?: string; name: string; color?: number }
 export interface WachapSyncResult { created: number; merged: number; skipped: number; total: number }
 
-export async function getWachapLabels(): Promise<{ labels: WachapLabel[]; available: boolean; reason?: string }> {
-  const data = await messagingFetch<{ labels?: WachapLabel[]; available?: boolean; reason?: string }>(
-    "wachap/labels"
-  );
+export async function getWachapLabels(): Promise<{
+  labels: WachapLabel[];
+  available: boolean;
+  reason?: string;
+  /** e.g. LABELS_ENDPOINT_NOT_DEPLOYED, LABELS_FORBIDDEN, LABELS_UNAVAILABLE */
+  code?: string;
+}> {
+  const data = await messagingFetch<{
+    labels?: WachapLabel[];
+    available?: boolean;
+    reason?: string;
+    code?: string;
+  }>("wachap/labels");
   return {
     labels: Array.isArray(data?.labels) ? data.labels : [],
     available: Boolean(data?.available),
     reason: data?.reason,
+    code: data?.code,
   };
 }
 

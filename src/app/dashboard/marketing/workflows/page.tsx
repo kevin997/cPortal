@@ -37,6 +37,9 @@ export default function WorkflowsPage() {
   const [syncing, setSyncing] = useState(false);
   const [labels, setLabels] = useState<WachapLabel[]>([]);
   const [labelsAvailable, setLabelsAvailable] = useState(true);
+  // The server classifies why labels are missing; prefer its wording over a
+  // hardcoded sentence that silently goes stale when the cause changes.
+  const [labelsReason, setLabelsReason] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
 
   const load = useCallback(async () => {
@@ -45,7 +48,7 @@ export default function WorkflowsPage() {
       const [workflows, labelData] = await Promise.all([
         workflowFetch<{ workflows: Automation[] }>(), getWachapLabels(),
       ]);
-      setItems(workflows.workflows); setLabels(labelData.labels); setLabelsAvailable(labelData.available);
+      setItems(workflows.workflows); setLabels(labelData.labels); setLabelsAvailable(labelData.available); setLabelsReason(labelData.reason ?? null);
     } catch (error) { toast({ title: "Chargement impossible", description: error instanceof Error ? error.message : "Erreur", variant: "destructive" }); }
     finally { setLoading(false); }
   }, []);
@@ -81,7 +84,7 @@ export default function WorkflowsPage() {
 
     <Card className="border-emerald-200 bg-emerald-50/40"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><Bot className="h-5 w-5 text-emerald-700" />Cadence recommandée</CardTitle><CardDescription>Point de départ commercial à adapter selon le produit et les réponses.</CardDescription></CardHeader><CardContent className="grid gap-3 text-sm sm:grid-cols-3"><div><strong>J+2 à J+3</strong><p className="text-muted-foreground">Première relance utile après capture.</p></div><div><strong>J+5 à J+7</strong><p className="text-muted-foreground">Objection, preuve sociale ou bénéfice.</p></div><div><strong>J+14</strong><p className="text-muted-foreground">Dernière relance douce avant nurturing.</p></div></CardContent></Card>
 
-    <Card><CardHeader className="flex-row items-start justify-between"><div><CardTitle className="flex items-center gap-2 text-base"><Tags className="h-4 w-4" />Contacts et étiquettes Wachap</CardTitle><CardDescription>{labelsAvailable ? `${labels.length} étiquette(s) disponible(s).` : "L'API Wachap de production ne fournit pas encore la route d'étiquettes documentée. La synchronisation globale reste disponible."}</CardDescription></div><Button variant="outline" size="sm" onClick={sync} disabled={syncing}>{syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Synchroniser</Button></CardHeader>{labels.length > 0 && <CardContent className="flex flex-wrap gap-2">{labels.map((label) => <Badge key={label.labelId || label.id || label.name} variant="secondary">{label.name}</Badge>)}</CardContent>}</Card>
+    <Card><CardHeader className="flex-row items-start justify-between"><div><CardTitle className="flex items-center gap-2 text-base"><Tags className="h-4 w-4" />Contacts et étiquettes Wachap</CardTitle><CardDescription>{labelsAvailable ? `${labels.length} étiquette(s) disponible(s).` : `${labelsReason ?? "Étiquettes Wachap indisponibles."} La synchronisation globale reste disponible.`}</CardDescription></div><Button variant="outline" size="sm" onClick={sync} disabled={syncing}>{syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Synchroniser</Button></CardHeader>{labels.length > 0 && <CardContent className="flex flex-wrap gap-2">{labels.map((label) => <Badge key={label.labelId || label.id || label.name} variant="secondary">{label.name}</Badge>)}</CardContent>}</Card>
 
     {loading ? <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin" /></div> : items.length === 0 ? <Card><CardContent className="flex flex-col items-center py-12 text-center"><WorkflowIcon className="mb-3 h-10 w-10 text-muted-foreground" /><p className="font-semibold">Aucun workflow</p><p className="text-sm text-muted-foreground">Commencez par une relance trois jours après l'ajout d'un lead.</p></CardContent></Card> : <div className="grid gap-4 lg:grid-cols-2">{items.map((item) => <Card key={item.id}><CardHeader className="flex-row items-start justify-between gap-4"><div><CardTitle className="text-base">{item.name}</CardTitle><CardDescription>{item.trigger_type === "lead_created" ? "Nouveau lead" : `Étape : ${STAGE_LABELS[item.trigger_stage!]}`} · attente {item.delay_days} jour(s)</CardDescription></div><Switch checked={item.active} onCheckedChange={(checked) => toggle(item, checked)} aria-label={`Activer ${item.name}`} /></CardHeader><CardContent><p className="line-clamp-3 text-sm">{item.message}</p><div className="mt-4 flex gap-2"><Badge variant="secondary">{item.stats.pending || 0} en attente</Badge><Badge variant="secondary">{item.stats.sent || 0} envoyés</Badge><Badge variant="secondary">{item.stats.failed || 0} échecs</Badge></div></CardContent></Card>)}</div>}
 

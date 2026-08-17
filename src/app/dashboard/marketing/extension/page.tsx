@@ -45,7 +45,7 @@ const fields = [
 // csl-automations/scripts/package-extension.sh. The download is version-named
 // so a stale build is visible in the filename instead of hiding behind a
 // browser cache -- the dashboard served 1.3.1 for days without it showing.
-const EXTENSION_VERSION = "1.4.1";
+const EXTENSION_VERSION = "1.5.0";
 const EXTENSION_FILE = `/downloads/eshu-whatsapp-crm-${EXTENSION_VERSION}.zip`;
 
 export default function ExtensionGuidePage() {

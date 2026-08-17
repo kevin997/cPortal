@@ -41,6 +41,13 @@ const fields = [
   "Contexte, prochaine action et accord de contact",
 ];
 
+// Bump alongside chrome-extension/manifest.json, then rebuild the archive with
+// csl-automations/scripts/package-extension.sh. The download is version-named
+// so a stale build is visible in the filename instead of hiding behind a
+// browser cache -- the dashboard served 1.3.1 for days without it showing.
+const EXTENSION_VERSION = "1.4.0";
+const EXTENSION_FILE = `/downloads/eshu-whatsapp-crm-${EXTENSION_VERSION}.zip`;
+
 export default function ExtensionGuidePage() {
   return (
     <div className="space-y-6 py-6">
@@ -55,9 +62,9 @@ export default function ExtensionGuidePage() {
             Qualifiez un contact, planifiez sa relance et enregistrez son accord directement au-dessus de la conversation WhatsApp.
           </p>
           <Button asChild className="mt-6 w-full bg-white text-[#12372d] hover:bg-emerald-50 sm:w-auto">
-            <a href="/downloads/eshu-whatsapp-crm.zip" download>
+            <a href={EXTENSION_FILE} download>
               <Download className="h-4 w-4" />
-              Télécharger Eshu WhatsApp CRM
+              Télécharger Eshu WhatsApp CRM v{EXTENSION_VERSION}
             </a>
           </Button>
         </div>

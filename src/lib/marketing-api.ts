@@ -86,6 +86,8 @@ export interface LeadsResponse {
 }
 
 export interface LeadsQuery {
+  /** Omit leads already in this list, applied server-side before paging. */
+  exclude_list_id?: string;
   stage?: string;
   product?: string;
   country?: string;
@@ -302,6 +304,7 @@ export async function getLeads(query: LeadsQuery): Promise<LeadsResponse> {
     country: query.country,
     source: query.source,
     q: query.q,
+    exclude_list_id: query.exclude_list_id,
     page: query.page,
     per_page: query.per_page,
   });

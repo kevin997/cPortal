@@ -47,6 +47,7 @@ import {
   MESSAGE_CHANNELS,
   addContactsToList,
   createList,
+  getListContacts,
   getLists,
   parseContactLines,
   sendBulkMessage,
@@ -74,6 +75,10 @@ export default function MessageriePage() {
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  // Phones already in the selected list, so the picker never offers a contact
+  // the list already holds. Empty while no list is chosen.
+  const [listPhones, setListPhones] = useState<Set<string>>(new Set());
+  const [loadingListPhones, setLoadingListPhones] = useState(false);
 
   // ── Manual entry ─────────────────────────────────────────────────────────
   const [manualRaw, setManualRaw] = useState("");
@@ -168,11 +173,92 @@ export default function MessageriePage() {
     setLeadsPage(1);
   }
 
+  // Load every phone already in the selected list. The endpoint caps a page at
+  // 500, so walk it until a short page comes back.
+  useEffect(() => {
+    if (!selectedListId) {
+      setListPhones(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    const PAGE = 500;
+
+    (async () => {
+      setLoadingListPhones(true);
+      try {
+        const phones = new Set<string>();
+        let fetched = 0;
+        let total = Infinity;
+        // Bounded on three counts: a short page, reaching the reported total,
+        // and a hard page cap. An endpoint that ignored `offset` would
+        // otherwise spin here forever.
+        for (let page = 0; page < 200; page += 1) {
+          const result = await getListContacts(selectedListId, {
+            limit: PAGE,
+            offset: page * PAGE,
+          });
+          for (const contact of result.contacts) {
+            if (contact.phone) phones.add(contact.phone);
+          }
+          fetched += result.contacts.length;
+          total = result.total || total;
+          if (result.contacts.length < PAGE || fetched >= total) break;
+        }
+        if (!cancelled) setListPhones(phones);
+      } catch {
+        // Falling back to an empty set only means duplicates stay visible —
+        // the backend still refuses to insert them twice.
+        if (!cancelled) setListPhones(new Set());
+      } finally {
+        if (!cancelled) setLoadingListPhones(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedListId]);
+
   // Leads with no usable phone can't be messaged.
-  const reachableLeads = useMemo(
+  const messageableLeads = useMemo(
     () => leads.filter((l) => !l.opt_out && (l.phone_normalized || l.phone_raw)),
     [leads]
   );
+
+  // ...and a lead already in the target list is not worth offering again.
+  // Matching is on phone_normalized because that is what the backend stores:
+  // add_contacts normalises before insert.
+  const reachableLeads = useMemo(
+    () =>
+      listPhones.size === 0
+        ? messageableLeads
+        : messageableLeads.filter(
+            (l) => !l.phone_normalized || !listPhones.has(l.phone_normalized)
+          ),
+    [messageableLeads, listPhones]
+  );
+
+  const alreadyInListCount = messageableLeads.length - reachableLeads.length;
+
+  // Drop selections that just became hidden by the list filter, so the counter
+  // and the button state stop counting leads that can no longer be submitted.
+  // Scoped to the current page: selections made on other pages are untouched.
+  useEffect(() => {
+    if (alreadyInListCount === 0) return;
+    const visible = new Set(reachableLeads.map((l) => l.id));
+    setSelectedLeadIds((previous) => {
+      const next = new Set(previous);
+      let changed = false;
+      for (const lead of messageableLeads) {
+        if (next.has(lead.id) && !visible.has(lead.id)) {
+          next.delete(lead.id);
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+  }, [alreadyInListCount, reachableLeads, messageableLeads]);
 
   const allSelected =
     reachableLeads.length > 0 && selectedLeadIds.size === reachableLeads.length;
@@ -509,10 +595,22 @@ export default function MessageriePage() {
                   </Button>
                 </div>
               </div>
+              {alreadyInListCount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {alreadyInListCount} contact
+                  {alreadyInListCount > 1 ? "s" : ""} déjà dans cette liste
+                  {alreadyInListCount > 1 ? " ont été masqués" : " a été masqué"}
+                </p>
+              )}
               <Button
                 size="sm"
                 onClick={handleAddSelectedLeads}
-                disabled={adding || selectedLeadIds.size === 0 || !selectedListId}
+                disabled={
+                  adding ||
+                  loadingListPhones ||
+                  selectedLeadIds.size === 0 ||
+                  !selectedListId
+                }
               >
                 {adding ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

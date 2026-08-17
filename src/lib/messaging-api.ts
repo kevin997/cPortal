@@ -178,3 +178,59 @@ export async function getWachapLabels(): Promise<{
 export function syncWachapContacts(): Promise<WachapSyncResult> {
   return messagingFetch("wachap/sync", { method: "POST" });
 }
+
+// --- Service catalogue -------------------------------------------------
+// The searchable list of services shown in the WhatsApp extension. It used to
+// be hardcoded in the extension's content script, so adding one meant shipping
+// a new extension build to every user.
+
+export interface CatalogService {
+  id: string;
+  name: string;
+  active: boolean;
+  position: number;
+  created_at: string;
+}
+
+async function catalogFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`/api/marketing/catalog/${path}`, {
+    ...init,
+    headers: {
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers,
+    },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error || data?.detail || "Une erreur est survenue");
+  return data as T;
+}
+
+export async function getServices(includeInactive = true): Promise<CatalogService[]> {
+  const data = await catalogFetch<{ services?: CatalogService[] }>(
+    `services?include_inactive=${includeInactive ? "true" : "false"}`
+  );
+  return Array.isArray(data?.services) ? data.services : [];
+}
+
+export async function createService(name: string): Promise<CatalogService> {
+  const data = await catalogFetch<{ service: CatalogService }>("services", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  return data.service;
+}
+
+export async function updateService(
+  id: string,
+  patch: { name?: string; active?: boolean; position?: number }
+): Promise<CatalogService> {
+  const data = await catalogFetch<{ service: CatalogService }>(`services/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return data.service;
+}
+
+export function deleteService(id: string): Promise<{ deleted: string }> {
+  return catalogFetch(`services/${id}`, { method: "DELETE" });
+}

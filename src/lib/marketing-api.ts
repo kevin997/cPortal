@@ -68,6 +68,16 @@ export interface LeadDetail extends Lead {
   events: LeadEvent[];
 }
 
+/**
+ * Wire shape of GET /leads/{id}. The service nests the lead under a `lead`
+ * key (schemas.LeadDetailResponse) rather than returning it flat, so the
+ * response cannot be handed to consumers as-is.
+ */
+interface LeadDetailPayload {
+  lead: Lead;
+  events: LeadEvent[];
+}
+
 export interface LeadsResponse {
   items: Lead[];
   total: number;
@@ -299,13 +309,31 @@ export async function getLeads(query: LeadsQuery): Promise<LeadsResponse> {
 }
 
 export async function getLead(id: string): Promise<LeadDetail> {
-  return marketingFetch<LeadDetail>(`leads/${id}`);
+  // Flatten `{ lead, events }` into the shape callers expect. Casting the
+  // nested payload straight to LeadDetail left every lead field undefined —
+  // the detail panel rendered blanks and the save PATCHed to `leads/undefined`.
+  const payload = await marketingFetch<LeadDetailPayload>(`leads/${id}`);
+
+  // marketingFetch ends in `data as T`, so a shape change is not a type error.
+  // Fail here instead of letting undefined fields reach the UI and the next
+  // request URL.
+  if (!payload?.lead?.id) {
+    throw new Error("Réponse inattendue du service marketing pour ce contact");
+  }
+
+  return { ...payload.lead, events: payload.events ?? [] };
 }
 
 export async function updateLead(
   id: string,
   data: { stage?: JourneyStage; notes?: string; opt_out?: boolean }
 ): Promise<Lead> {
+  // Without this an absent id is interpolated as the literal "undefined" and
+  // the failure surfaces as a confusing 404 from the API.
+  if (!id) {
+    throw new Error("Identifiant de contact manquant");
+  }
+
   return marketingFetch<Lead>(`leads/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
